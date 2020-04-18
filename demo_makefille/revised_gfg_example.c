@@ -153,10 +153,11 @@ int ownCmdHandler(char** parsed)
 	int NoOfOwnCmds = 4, i, switchOwnArg = 0; 
 	char* ListOfOwnCmds[NoOfOwnCmds]; 
 	char* username; 
+    int t = 1;
 
 	ListOfOwnCmds[0] = "exit"; 
 	ListOfOwnCmds[1] = "cd"; 
-	ListOfOwnCmds[2] = "help"; 
+	ListOfOwnCmds[2] = "echo"; 
 	ListOfOwnCmds[3] = "hello"; 
 
 
@@ -167,6 +168,8 @@ int ownCmdHandler(char** parsed)
 		} 
 	} 
 
+    
+
 	switch (switchOwnArg) { 
 	case 1: 
 		printf("\nGoodbye\n"); 
@@ -174,9 +177,15 @@ int ownCmdHandler(char** parsed)
 	case 2: 
 		chdir(parsed[1]); 
 		return 1; 
-	case 3: 
-		openHelp(); 
-		return 1; 
+	case 3:
+		while(parsed[t]!=NULL){
+            if(t>1){
+                printf(" ");
+            }
+			printf("%s",parsed[t]);
+			t++;
+		}
+		return 1;
 	case 4: 
 		username = getenv("USER"); 
 		printf("\nHello %s.\nMind that this is "
