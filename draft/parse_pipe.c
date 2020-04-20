@@ -12,6 +12,9 @@
 #define MAXLIST 100 // max number of commands to be supported 
 
 
+
+
+
 int parsePipe(char* str, char** pipe_seped, char* two_D_pipe_seped[MAXLIST][MAXLIST]){
 	int i = 0;
     int j = 0;

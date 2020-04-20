@@ -12,32 +12,34 @@
 #define MAXLIST 100 // max number of commands to be supported 
 
 
-int parsePipe(char* str, char** pipe_seped, char* two_D_pipe_seped[MAXLIST][MAXLIST]){
+void parseSpace(char* str, char** parsed) 
+{   
+	int i; 
+
+
+	for (i = 0; i < MAXLIST; i++) { 
+        
+		parsed[i] = strsep(&str, " "); 
+
+		if (parsed[i] == NULL) 
+			break; 
+		if (strlen(parsed[i]) == 0) 
+			i--; 
+	}
+} 
+
+void parsePipe(char* str, char** pipe_seped){
 	int i = 0;
-    int j = 0;
-    int k = 0;
+
 
     if(str!=NULL){
         pipe_seped[i] = strtok(str,"|");
         while(pipe_seped[i]!=NULL){
-            printf("%d of | : %s \n", i, pipe_seped[i]);
             i+=1;
             pipe_seped[i] = strtok(NULL,"|");
         }
     }
-
-    printf("stage 1");
-
-    while(pipe_seped[j]!=NULL){
-        two_D_pipe_seped[j][k] = strtok(pipe_seped[j]," ");
-        while(two_D_pipe_seped[j][k]!=NULL){
-            k++;
-            two_D_pipe_seped[j][k] = strtok(NULL," ");
-        }
-        j++;
-    }
-    printf("stage 2");
-	return i; //return after seperating input with &, we get how many command
+    //return after seperating input with &, we get how many command
 }
 
 
@@ -47,14 +49,29 @@ int main()
 
 	char *pipe_sep[MAXLIST], *semi_sep[MAXLIST], *and_sep[MAXLIST];
 
-	char *multi_semi_col[MAXLIST][MAXLIST];
-	char *multi_and[MAXLIST][MAXLIST];
-	char *multi_pipe[MAXLIST][MAXLIST];
-
+    char demostring[MAXLIST];
+    char* to_execute[MAXLIST];
 
     scanf("%[^\n]%*c", inputString);
-    int pipecnt = 0;
-    pipecnt = parsePipe(inputString,pipe_sep,multi_pipe); 
+    
+    parsePipe(inputString,pipe_sep); 
+    
+    strcpy(demostring,pipe_sep[0]);
+
+
+    printf("%s \n",demostring);
+
+    parseSpace(demostring,to_execute);
+    printf("aaa %s \n",to_execute[0]);
+    printf("aaa %s \n",to_execute[1]);
+    printf("aaa %s \n",to_execute[2]);
+
+
+    // char *demolist[MAXLIST];
+    // printf("aaa %s \n",demolist[0]);
+    // demolist[0] = "12345";
+    // printf("bbb %s \n",demolist[0]);
+
     return 0;
 
 } 
