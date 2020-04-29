@@ -17,6 +17,10 @@ int command_pipe[2];
 #define READ  0
 #define WRITE 1
  
+static char line[1024];
+static int n = 0; /* number of calls to 'command' */
+
+
 ////// STEP 3: 根据当前command的位置（开头，中间，结尾）来执行command
 static int command(int input, int first, int last)
 {
@@ -150,8 +154,6 @@ static void split(char* cmd)
 }
 
 
-static char line[1024];
-static int n = 0; /* number of calls to 'command' */
 
 ////// STEP 1: 按｜切割最初的command，切下来的部分存为 cmd ， 剩下的部分存为 next
 ////////////// while loop 顺序切割， 切一段，执行一段。只需要标记切下来这部分是 头 中间 尾巴。
