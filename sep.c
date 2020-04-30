@@ -15,28 +15,37 @@ void printError(){
   // TODO: exit gracefully: process or program, where to put exit(0)
 }
 
-int testSingleCommand(int count){
-  if(count == 2){
-    printError();
-  }
+int testSingleCommand(int count, int *p){
+  dup2(*p, STDOUT_FILENO);
   printf("Executing ----------------\n");
   sleep(5-count); 
-  printf("Count = %d, In child process, child_pid is %d\n", count, getpid());
+  printf("process %d is done\n", count);
   return 0;
 }
 
 int main(){
   int i, status;
   pid_t pid;
+
+  char inbuf[64]; // used to get the input
+  int p[2];
+  int readStatus;
+
+  pipe(p);
+  // write(p[1], "", 1024);
   // sequential way
   for(i=0; i<5; i++){
     if((pid = fork())== 0){
-      testSingleCommand(i);
+      // printf("inbuf in child closure is %s\n", inbuf);
+      dup2(p[1], STDOUT_FILENO);
+      testSingleCommand(i, &p[1]);
       exit(0);
     }
     else{
       int cpid = waitpid(pid, &status, 0);
-      printf("Return child %d\n", cpid);
+      readStatus = read(p[0], inbuf, 1024);
+      printf("inbuf in parent closure is \n %s\n", inbuf);
+      // printf("Return child %d\n", cpid);
     }
   }
 

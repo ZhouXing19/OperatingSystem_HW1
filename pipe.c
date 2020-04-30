@@ -22,9 +22,11 @@ void printError(){
   // TODO: exit gracefully: process or program, where to put exit(0) -> Notes 1
   // exit from the shell？？
   // for extra args, you should print an error message to stderr and then exit gracefully.
+  // exit or return;
 }
 
-int execRedirectCmd(char* userInput){
+int execRedirectCmd(char* userInput, int* input){
+    // TODO ================================================
     char* cmd = strtok(userInput, ">");
     char* output_fd = strtok(NULL, " ");
     // check invalid input eg. ls > out1 out2
@@ -53,32 +55,16 @@ int execRedirectCmd(char* userInput){
     return 0;
 }
 
-int execPipeCmd(char* userInput){
-  char* parsed[20];
-  int n=0;
-  parsed[n] = strtok(userInput, "|");
-  while(parsed[n] != NULL){
-    parsed[++n] = strtok(NULL, "|");
-  }
-
-  int p[2], pid;
-  if(pipe(p)<0) exit(1);
-
-  // sequential way
-  for(int i=0; i<n; i++){
-    // redirect
-    
-
-  }
-
-
-  return 0;
-}
-
-int execSimpleCmd(char* userInput){
+int execSimpleCmd(char* userInput, int* output, int* input){
+  // check if dup2 is needed
+  if (input != NULL) dup2(*input, STDIN_FILENO);
+  if (output != NULL) dup2(*output, STDOUT_FILENO);
+  // copy user input for echo parsing
   char copyInput[64];
   strcpy (copyInput, userInput);
   int quote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
+
+  // general parsing
   char* parsed[20];
   int i=0;
   parsed[i] = strtok(userInput, " ");
@@ -100,10 +86,9 @@ int execSimpleCmd(char* userInput){
     // case 1: no args
     if(parsed[1] == NULL){
       printf("\n");
-      return 0;
     } 
     // case 2: arg starts with '\' 
-    if(parsed[1][0] == '\''){
+    else if(parsed[1][0] == '\''){
       printError();
     }
     // case 3: arg starts with " 
@@ -126,40 +111,95 @@ int execSimpleCmd(char* userInput){
   }
 
   else if(strcmp(parsed[0],"pwd")==0){
-    if(parsed[1] == NULL) printError(); // extra arg error
+    if(parsed[1] != NULL) printError(); // extra arg error
     char cwd[1024]; 
-	  getcwd(cwd, sizeof(cwd)); 
+	  getcwd(cwd, strlen(cwd)); 
 	  printf("%s\n", cwd);
   }
 
   // system function:
   else{
-    printf("System function - - cmd is %s\n", parsed[0]);
-    int res = execvp(parsed[0], parsed);
-    printf("%s result is %d\n", parsed[0],res);
+    // printf("System function --- cmd is %s\n", parsed[0]);
+    execvp(parsed[0], parsed);
+    // printf("finish");
   }
-    return 0;
+
+  //
+  if(input != NULL) close(*input);
+  if(output != NULL) close(*output);
+  return 0;
 }
 
 // STEP 2 **********************************************************************
+int execNonPipeCmd(char* userInput, int* output, int* input){
+  char* redirectSymbol = strchr(userInput, '>');
+  if (redirectSymbol != NULL) execRedirectCmd(userInput, input);
+  else{
+    execSimpleCmd(userInput, output, input);
+  }
+  return 0;
+}
+
+int execPipeCmd(char* userInput){
+  char* parsed[20];
+  int n=0;
+  parsed[n] = strtok(userInput, "|");
+  while(parsed[n] != NULL){
+    parsed[++n] = strtok(NULL, "|");
+  }
+  // printf("We have %d commands\n", n);
+
+  int p[2];
+  int pid;
+  int status;
+
+  pipe(p);
+  // write(p[1], " ", 64);
+  for(int i=0; i<n; i++){
+    // redirect
+    if((pid = fork())== 0){
+      if(i != n-1){
+        // dup2(*p, STDOUT_FILENO);
+        execNonPipeCmd(parsed[i], &p[1], &p[0]);
+        exit(0);
+      }
+      else{
+        execNonPipeCmd(parsed[i], NULL, &p[0]);
+        exit(0);
+      }
+    }
+    else{
+      int cpid = waitpid(pid, &status, 0);
+      if(i == n-1) close(p[0]);
+      close(p[1]);
+      // char str[64];
+      // sprintf(str, "%d", p[1]);
+      // strcat(parsed[i+1], str);
+      // check status, if error -> exit 
+      // printf("Return child %d\n", cpid);
+    }
+
+  }
+  return 0;
+}
+
 
 int parseSingleCommand(char* userInput){
-  // case 1: pipeline
-  // case 2: redirection
-  // case 3: build-in or system function
-  // TODO: fork()可能要放在这里
-  int pipeSymbol = 0;
-  int redirectSymbol = 0;
-  for(int i=0; i<sizeof(userInput); i++){
-    if(userInput[i] == '|') pipeSymbol = i;
-    if(userInput[i] == '>') redirectSymbol = i;
+  // reverse + strchr
+  int pipe = 0;
+  int redirect = 0;
+  for(int i=0; i<strlen(userInput); i++){
+    if(userInput[i] == '|') pipe = i;
+    if(userInput[i] == '>') redirect = i;
   }
-  if(pipeSymbol > 0 && redirectSymbol > pipeSymbol) execPipeCmd(userInput);
-  else if(pipeSymbol == 0 &&  redirectSymbol>0) execRedirectCmd(userInput);
-  else if(pipeSymbol == 0 && redirectSymbol == 0) execSimpleCmd(userInput);
+  if(pipe == 0){
+    execNonPipeCmd(userInput, NULL, NULL);
+  } 
+  else if(redirect == 0 || redirect > pipe){
+    execPipeCmd(userInput);
+  } 
   else{
-    // error: '>' before last '|'
-    printError();
+    printError();// error: '>' before last '|'
   }
   return 0;
 }
@@ -178,5 +218,5 @@ int main(){
   char userInput[MAX_INPUT_LEN];
   printf("520shell>");
   getUserInput(userInput);
-  execPipeCmd(userInput);
+  parseSingleCommand(userInput);
 }

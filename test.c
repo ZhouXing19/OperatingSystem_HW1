@@ -19,13 +19,13 @@ int getUserInput(char* userInput){
 }
 
 int main(){ 
-  // int inputFd = open("myFile", O_RDWR);
-  // char* parsed1[20];
-  // parsed1[0] = "ls";
-  // parsed1[1] = "-la";
+  int inputFd = open("myFile", O_RDWR);
+  char* parsed1[20];
+  parsed1[0] = "ls";
+  parsed1[1] = "-la";
 
-  // char* parsed2[20];
-  // parsed2[0] = "echo";
+  char* parsed2[20];
+  parsed2[0] = "echo";
   printf("1HERE!");
   char inbuf[1024];
   int p[2], status, nbytes;
@@ -40,24 +40,24 @@ int main(){
   printf("nbytes is %s\n", inbuf);
   return 0;
 
-  // if((pid = fork())== 0){
-  //     dup2(p[1], STDOUT_FILENO);
-  //     int res = execvp(parsed1[0], parsed1);
-  //     exit(0);
-  //   }
-  // else{
-  //   int cpid = waitpid(pid, &status, 0);
-  // }
+  if((pid = fork())== 0){
+      dup2(p[1], STDOUT_FILENO);
+      int res = execvp(parsed1[0], parsed1);
+      exit(0);
+    }
+  else{
+    int cpid = waitpid(pid, &status, 0);
+  }
 
-  // if((pid = fork())== 0){
-  //     nbytes = read(p[0], inbuf, 1024);
-  //     dup2(STDOUT_FILENO, STDOUT_FILENO);
-  //     printf("get the output %s\n", inbuf);
-  //     exit(0);
-  //   }
-  // else{
-  //   int cpid = waitpid(pid, &status, 0);
+  if((pid = fork())== 0){
+      nbytes = read(p[0], inbuf, 1024);
+      dup2(STDOUT_FILENO, STDOUT_FILENO);
+      printf("get the output %s\n", inbuf);
+      exit(0);
+    }
+  else{
+    int cpid = waitpid(pid, &status, 0);
     
-  // }
+  }
     return 0; 
 }
