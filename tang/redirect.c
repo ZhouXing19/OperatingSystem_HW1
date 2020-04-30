@@ -22,6 +22,8 @@ int main(){
     char* parsed[20];
     parsed[0] = "ls";
     parsed[1] = "-la";
+    parsed[2] = NULL;
+    parsed[3] = NULL;
 
     if (execvp(parsed[0], parsed) < 0) { 
       printf("\nCould not execute command.."); 

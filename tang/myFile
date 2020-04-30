@@ -1,12 +1,13 @@
-total 104
-drwxr-xr-x  11 jianingtang  staff    352 Apr 27 14:07 .
-drwxr-xr-x   4 jianingtang  staff    128 Apr 27 14:07 ..
-drwxr-xr-x  14 jianingtang  staff    448 Apr 22 21:47 .git
--rw-r--r--   1 jianingtang  staff   2460 Apr 27 14:00 Main.c
+total 120
+drwxr-xr-x  12 jianingtang  staff    384 Apr 27  2020 .
+drwxr-xr-x   4 jianingtang  staff    128 Apr 27  2020 ..
+drwxr-xr-x  14 jianingtang  staff    448 Apr 27 16:40 .git
+-rw-r--r--   1 jianingtang  staff   4579 Apr 27 20:02 Main.c
 -rw-r--r--   1 jianingtang  staff   1205 Apr 22 21:38 ls.c
--rw-r-x---   1 jianingtang  staff    610 Apr 27 13:35 myFile
--rw-r--r--   1 jianingtang  staff    636 Apr 27 13:37 redirect.c
--rwxr-xr-x   1 jianingtang  staff  12952 Apr 27 13:35 res
--rw-r--r--   1 jianingtang  staff   1076 Apr 27 14:06 sep.c
+-rw-r-x---   1 jianingtang  staff    669 Apr 27 14:07 myFile
+-rw-r--r--   1 jianingtang  staff    644 Apr 27 19:43 parsed.c
+-rw-r--r--   1 jianingtang  staff    680 Apr 27 20:15 redirect.c
+-rwxr-xr-x   1 jianingtang  staff  12952 Apr 27 20:15 res
+-rw-r--r--   1 jianingtang  staff   1070 Apr 27 14:14 sep.c
 -rwxr-xr-x   1 jianingtang  staff  12836 Apr 27 14:07 ser
 drwxr-xr-x   3 jianingtang  staff     96 Apr 22 21:41 testFolder

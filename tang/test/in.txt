@@ -1,0 +1,3 @@
+ls        -la        /bin   
+  pwd   
+	cal	
