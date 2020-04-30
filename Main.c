@@ -201,20 +201,20 @@ int parseSingleCommand(char* userInput){
 }
 
 int parseSequentialCommand(char* userInput){
-  printf("--- Sequential Command\n");
   int status;
   pid_t pid;
   // sequential way
   char* token = strtok(userInput, ";");
   while(token != NULL){
-    printf("token is %s\n", token);
-    if((pid = fork())== 0){
+    pid = fork();
+    if(pid < 0) return 1;
+    else if(pid == 0){
       parseSingleCommand(token);
       exit(0);
     }
     else{
       int cpid = waitpid(pid, &status, 0);
-      printf("Return child %d\n", cpid);
+      // printf("Return child %d\n", cpid);
     }
     token = strtok(NULL, ";");
   }
@@ -222,12 +222,14 @@ int parseSequentialCommand(char* userInput){
 }
 
 int parseParallelCommand(char* userInput){
-  printf("--- Parallel Command\n");
+  // printf("--- Parallel Command\n");
   int i, status;
   pid_t pid;
   char* token = strtok(userInput, "&");
   while(token != NULL){
-    if((pid = fork())== 0){
+    pid = fork();
+    if(pid < 0) return 1;
+    if( pid == 0){
       parseSingleCommand(token);
       exit(0);
     }
@@ -236,7 +238,7 @@ int parseParallelCommand(char* userInput){
 
   while (wait(NULL) != -1){
     pid_t cpid = waitpid(pid, &status, 0);
-    printf("Return child %d\n", cpid);
+    // printf("Return child %d\n", cpid);
   }
   return 0;
 }
