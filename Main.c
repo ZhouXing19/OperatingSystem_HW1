@@ -286,11 +286,11 @@ int main(int argc, char** argv){
 
   // interactive mode
   if(argc == 1){
-    // while(strcmp(userInput,"bye") != 0){
+    while(strcmp(userInput,"bye") != 0){
       printf("520shell>");
       getUserInput(userInput);
       checkMixingCommand(userInput);
-    // }
+    }
   }
 
   // batch mode
