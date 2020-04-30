@@ -36,7 +36,6 @@ int getUserInput(char* userInput){
   fgets(buf, MAX_INPUT_LEN, stdin);
   char *token = strtok(buf, "\n");
   if (strlen(token)>MAX_INPUT_LEN){
-    // error
     return 1;
   }
   strcpy(userInput, buf);
