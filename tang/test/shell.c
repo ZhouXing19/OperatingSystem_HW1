@@ -336,7 +336,7 @@ parseexec(char **ps, char *es) {
 	ret = parseredirs(ret, ps, es);
 //	printf("argv:");
 	while (!peek(ps, es, "|")) {
-			printf("\n *ps=%s, es=%s, q=%s, eq=%s \n",*ps,es,q,eq);
+			//printf("\n *ps=%s, es=%s, q=%s, eq=%s \n",*ps,es,q,eq);
 		if ((tok = gettoken(ps, es, &q, &eq)) == 0)
 			break;
 		if (tok != 'a') {

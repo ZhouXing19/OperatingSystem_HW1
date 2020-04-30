@@ -1,0 +1,11 @@
+Do we need to worry about cases like `pwd | cat` or `cat foo.txt | echo`?
+-Yes. All these cases should be treated the same as with a regular Unix shell
+
+Here's something to test your shell on:
+.mysh> echo abc | grep a
+.mysh> abc
+
+.mysh> echo abc | grep d
+.mysh>
+
+ls | grep ".pdf" | > file.txt
