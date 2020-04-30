@@ -21,16 +21,14 @@ void printError(){
 // STEP 3 **********************************************************************
 int execRedirectCmd(char* userInput){
     char* cmd = strtok(userInput, ">");
-    printf("In redirect, cmd is %s\n", cmd);
     char* output_fd = strtok(NULL, " ");
     // check invalid input eg. ls > out1 out2
-    printf("Outputfile is %s\n", output_fd);
     char* extra = strtok(NULL, " ");
     if(extra != NULL){
       printError();
     }
 
-    int fd1 = open(output_fd, O_RDWR | O_CREAT); 
+    int fd1 = open(output_fd, O_RDWR | O_CREAT | O_TRUNC); 
     if (fd1 < 0){
       return 1; 
     }  // TODO: exit(0 or 1)
@@ -98,6 +96,7 @@ int execSimpleCmd(char* userInput, int* output, int* input){
       char* str = strtok(NULL, "\""); 
       char* rest = strtok(NULL, "\"");
       if(rest != NULL || quote == 1){
+        if(str == NULL) str = "";
         printf("%s\n", str);
       }
       else{
