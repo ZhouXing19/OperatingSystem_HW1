@@ -14,14 +14,14 @@ char ERROR_MESSAGE[128] = "An error has occurred\n";
 char *path;
 static char *args[256];
 
-int fork1(void) {
-	int pid;
+// int fork1(void) {
+// 	int pid;
 
-	pid = fork();
-	if (pid == -1)
-		perror("fork");
-	return pid;
-}
+// 	pid = fork();
+// 	if (pid == -1)
+// 		perror("fork");
+// 	return pid;
+// }
 
 void printError(){
         write(STDERR_FILENO, ERROR_MESSAGE, strlen(ERROR_MESSAGE));
@@ -49,11 +49,37 @@ void split(char* cmd){
   args[i+1] = NULL;
 }
 
+void execute(int i, char* buffer){
+    int status;
+    pid_t pid;
+    if((pid = fork())== 0){
+         write(STDOUT_FILENO, buffer, strlen(buffer));
+
+            //execute command
+            
+            // for(int k=0;k<4;k++){
+            //     printf("args[%d] =%s ;",k,args[k]);
+            // }
+
+           sleep(20-i); 
+           execvp(args[0],args);
+           
+           //exit(0);
+           printf("In child process, child_pid is %d\n", getpid());
+           }
+            
+    else{
+        int cpid1 = waitpid(pid, &status, 0);
+        printf("Return child1 %d\n", cpid1);
+        }
+
+}
+
 
 
 int main(int argc, char** argv){
         FILE *file = NULL;
-        path=(char*) malloc(BSIZE);
+        //path=(char*) malloc(BSIZE);
         char buffer[BSIZE];
         char line[BSIZE];
         
@@ -64,7 +90,7 @@ int main(int argc, char** argv){
                 printPrompt();
                  //Store standard input to the file.
         }
-        
+
         else if(argc==2){ //Batch mode
                 
                 char *bFile= strdup(argv[1]);
@@ -84,29 +110,14 @@ int main(int argc, char** argv){
             int status;
             pid_t pid;    
 
-            if((pid = fork())== 0){
+
             printf("Executing command [%d]----------------\n",i);
 
             // print command
             strcpy(line,buffer); 
-            char window[0x1000];
-            size_t length = snprintf(window, sizeof(window), \
-                        "%s", line);
-            write(STDOUT_FILENO, window, length);
+            split(line);
 
-            //execute command
-            split(buffer);
-            for(int k=0;k<4;k++){
-                printf("args[%d] =%s ;",k,args[k]);
-            }
-            //execvp(args[0],args);
-
-            printf("In child process, child_pid is %d\n", getpid());
-            }
-            else{
-                int cpid1 = waitpid(pid, &status, 0);
-                printf("Return child1 %d\n", cpid1);
-            }
+            execute(i,buffer);
 
             i++;
             if(batch==0)
@@ -118,7 +129,6 @@ int main(int argc, char** argv){
         // int numTomatoes = 10;
         // size_t length = snprintf(buffer, sizeof(buffer), "I would like %d tomatoes", numTomatoes);
         // write(STDOUT_FILENO, buffer, length);
-
 
 
 }
