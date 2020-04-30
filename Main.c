@@ -1,24 +1,21 @@
+#include<ctype.h>
 #include<errno.h>
 #include<fcntl.h>
 #include<limits.h>
 #include<stdio.h>
 #include<string.h> 
 #include<stdlib.h> 
-#include <stdbool.h>
+#include<stdbool.h>
 #include<unistd.h> 
 #include<readline/readline.h> 
 
 # define MAX_INPUT_LEN 64
-
 
 // STEP 4 Syntax Error *********************************************************
 void printError(){
   char error_message[30] = "An ERROR has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
   exit(0);
-  // TODO: exit gracefully: process or program, where to put exit(0) -> Notes 1
-  // exit from the shell？？
-  // for extra args, you should print an error message to stderr and then exit gracefully.
 }
 
 // STEP 3 **********************************************************************
@@ -116,12 +113,9 @@ int execSimpleCmd(char* userInput, int* output, int* input){
 
   // system function:
   else{
-    // printf("System function --- cmd is %s\n", parsed[0]);
     execvp(parsed[0], parsed);
-    // printf("finish");
   }
 
-  //
   if(input != NULL) close(*input);
   if(output != NULL) close(*output);
   return 0;
@@ -144,19 +138,16 @@ int execPipeCmd(char* userInput){
   while(parsed[n] != NULL){
     parsed[++n] = strtok(NULL, "|");
   }
-  // printf("We have %d commands\n", n);
 
   int p[2];
   int pid;
   int status;
 
-  pipe(p);
-  // write(p[1], " ", 64);
+  if(pipe(p)<0) return 1;
+
   for(int i=0; i<n; i++){
-    // redirect
     if((pid = fork())== 0){
       if(i != n-1){
-        // dup2(*p, STDOUT_FILENO);
         execNonPipeCmd(parsed[i], &p[1], &p[0]);
         exit(0);
       }
@@ -169,10 +160,6 @@ int execPipeCmd(char* userInput){
       int cpid = waitpid(pid, &status, 0);
       if(i == n-1) close(p[0]);
       close(p[1]);
-      // char str[64];
-      // sprintf(str, "%d", p[1]);
-      // strcat(parsed[i+1], str);
-      // check status, if error -> exit 
       // printf("Return child %d\n", cpid);
     }
 
@@ -249,44 +236,77 @@ int getUserInput(char* userInput){
   char buf[MAX_INPUT_LEN]; 
   fgets(buf, MAX_INPUT_LEN, stdin);
   char *token = strtok(buf, "\n");
-  if (strlen(token)>MAX_INPUT_LEN) printError();
+  if (strlen(token) == MAX_INPUT_LEN) printError();
   strcpy(userInput, buf);
   return 0;
 }
 
 int checkMixingCommand(char* userInput){
+  int status;
+  pid_t pid = fork();
+  if(pid < 0) return 1;
+  else if(pid == 0){
+    const char and = '&';
+    const char semi = ';';
+    char *findAnd = strchr(userInput, and);
+    char *findSemi = strchr(userInput, semi);
 
-  const char and = '&';
-  const char semi = ';';
-  char *findAnd = strchr(userInput, and);
-  char *findSemi = strchr(userInput, semi);
-
-  if(findAnd == NULL && findSemi == NULL){
-    parseSingleCommand(userInput);
-  } 
-  else if(findAnd == NULL && findSemi != NULL){
-    parseSequentialCommand(userInput);
-  }
-  else if(findAnd != NULL && findSemi == NULL){
-    parseParallelCommand(userInput);
+    if(findAnd == NULL && findSemi == NULL){
+      parseSingleCommand(userInput);
+    } 
+    else if(findAnd == NULL && findSemi != NULL){
+      parseSequentialCommand(userInput);
+    }
+    else if(findAnd != NULL && findSemi == NULL){
+      parseParallelCommand(userInput);
+    }
+    else{
+      printError();
+    }
   }
   else{
-    printError();
+    int cpid1 = waitpid(pid, &status, 0);
   }
   return 0;
 }
 
-int main(){
-  // print current working directory
-  // get user input
-  // parse user input && check invalid input
-
-  // WHILE LOOP
+int main(int argc, char** argv){
   char userInput[MAX_INPUT_LEN];
   int commandType;
 
-  //TODO: put while loop here, change prompt based on chdir ===================
-  printf("520shell>");
+  FILE *file = NULL;
+  char buffer[MAX_INPUT_LEN];
+
+  // interactive mode
+  if(argc == 1){
+    while(strcmp(userInput,"bye") != 0){
+      printf("520shell>");
+      getUserInput(userInput);
+      checkMixingCommand(userInput);
+    }
+  }
+
+  // batch mode
+  else if(argc == 2){
+    char *bFile= strdup(argv[1]);
+    if((file = fopen(bFile, "r")) == NULL){
+      printError();
+      return 0;
+    }
+
+    while(fgets(buffer, MAX_INPUT_LEN, file)){
+      char *token = strtok(buffer, "\n");
+      if (strlen(token) == MAX_INPUT_LEN){
+        printError();
+        continue;
+      } 
+      checkMixingCommand(token);
+    }
+  }
+  // extra input file
+  else {
+    printError();
+  }
   getUserInput(userInput);
   checkMixingCommand(userInput);
   return 0;

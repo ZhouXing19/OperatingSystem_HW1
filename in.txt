@@ -1,0 +1,6 @@
+echo yes
+echo no
+echo dshf
+echo sdfhjk
+echo jdhf 
+ls
