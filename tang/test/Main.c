@@ -98,6 +98,7 @@ int execSimpleCmd(char* userInput, int* output, int* input){
       char* str = strtok(NULL, "\""); 
       char* rest = strtok(NULL, "\"");
       if(rest != NULL || quote == 1){
+        if(str == NULL) str="";
         printf("%s\n", str);
       }
       else{
