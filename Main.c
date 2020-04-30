@@ -21,13 +21,20 @@ void printError(){
 // STEP 3 **********************************************************************
 int execRedirectCmd(char* userInput){
     char* cmd = strtok(userInput, ">");
+    printf("In redirect, cmd is %s\n", cmd);
     char* output_fd = strtok(NULL, " ");
     // check invalid input eg. ls > out1 out2
+    printf("Outputfile is %s\n", output_fd);
     char* extra = strtok(NULL, " ");
-    if(extra == NULL) printError();
+    if(extra != NULL){
+      printError();
+    }
 
-    int fd1 = open("output_fd", O_RDWR); 
-    if (fd1 < 0) exit(1); // TODO: exit(0 or 1)
+    int fd1 = open(output_fd, O_RDWR | O_CREAT); 
+    if (fd1 < 0){
+      return 1; 
+    }  // TODO: exit(0 or 1)
+
     // separate cmd part
     int p=0;
     char* parsed[20];
@@ -107,7 +114,7 @@ int execSimpleCmd(char* userInput, int* output, int* input){
   else if(strcmp(parsed[0],"pwd")==0){
     if(parsed[1] != NULL) printError(); // extra arg error
     char cwd[1024]; 
-	  getcwd(cwd, strlen(cwd)); 
+	  getcwd(cwd, sizeof(cwd)); 
 	  printf("%s\n", cwd);
   }
 
@@ -279,11 +286,11 @@ int main(int argc, char** argv){
 
   // interactive mode
   if(argc == 1){
-    while(strcmp(userInput,"bye") != 0){
+    // while(strcmp(userInput,"bye") != 0){
       printf("520shell>");
       getUserInput(userInput);
       checkMixingCommand(userInput);
-    }
+    // }
   }
 
   // batch mode
@@ -307,7 +314,5 @@ int main(int argc, char** argv){
   else {
     printError();
   }
-  getUserInput(userInput);
-  checkMixingCommand(userInput);
   return 0;
 }

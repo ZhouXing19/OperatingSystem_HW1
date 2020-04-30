@@ -1,13 +1,13 @@
 #include<errno.h>
 #include<fcntl.h>
-#include <unistd.h>
+#include<unistd.h>
 #include<stdio.h>
 #include<stdlib.h>
 
 extern int errno;
 int main(){
 
-  int fd1 = open("myFile", O_RDWR); 
+  int fd1 = open("miu", O_RDWR); 
     if (fd1 < 0)  
     { 
         perror("c1"); 
