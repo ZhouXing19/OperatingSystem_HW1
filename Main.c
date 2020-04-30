@@ -51,14 +51,17 @@ int execRedirectCmd(char* userInput){
     return 0;
 }
 
-int execPipeCmd(char* userInput){
-  return 0;
-}
 
-int execSimpleCmd(char* userInput){
+int execSimpleCmd(char* userInput, int* output, int* input){
+  // check if dup2 is needed
+  if (input != NULL) dup2(*input, STDIN_FILENO);
+  if (output != NULL) dup2(*output, STDOUT_FILENO);
+  // copy user input for echo parsing
   char copyInput[64];
   strcpy (copyInput, userInput);
   int quote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
+
+  // general parsing
   char* parsed[20];
   int i=0;
   parsed[i] = strtok(userInput, " ");
@@ -80,10 +83,9 @@ int execSimpleCmd(char* userInput){
     // case 1: no args
     if(parsed[1] == NULL){
       printf("\n");
-      return 0;
     } 
     // case 2: arg starts with '\' 
-    if(parsed[1][0] == '\''){
+    else if(parsed[1][0] == '\''){
       printError();
     }
     // case 3: arg starts with " 
@@ -92,11 +94,11 @@ int execSimpleCmd(char* userInput){
       char* str = strtok(NULL, "\""); 
       char* rest = strtok(NULL, "\"");
       if(rest != NULL || quote == 1){
-        if(str == NULL) str = "";
         printf("%s\n", str);
       }
       else{
-        printError(); // without trailing "
+        // without trailing "
+        printError();
       }
     }
     // case 4: normal case: echo arg
@@ -106,39 +108,94 @@ int execSimpleCmd(char* userInput){
   }
 
   else if(strcmp(parsed[0],"pwd")==0){
-    if(parsed[1] == NULL) printError(); // extra arg error
+    if(parsed[1] != NULL) printError(); // extra arg error
     char cwd[1024]; 
-	  getcwd(cwd, sizeof(cwd)); 
+	  getcwd(cwd, strlen(cwd)); 
 	  printf("%s\n", cwd);
   }
 
   // system function:
   else{
-    printf("System function - - cmd is %s\n", parsed[0]);
-    int res = execvp(parsed[0], parsed);
-    printf("result is %d\n", res);
+    // printf("System function --- cmd is %s\n", parsed[0]);
+    execvp(parsed[0], parsed);
+    // printf("finish");
   }
-    return 0;
+
+  //
+  if(input != NULL) close(*input);
+  if(output != NULL) close(*output);
+  return 0;
 }
 
 // STEP 2 **********************************************************************
-int parseSingleCommand(char* userInput){
-  // case 1: pipeline
-  // case 2: redirection
-  // case 3: build-in or system function
-  // TODO: fork()可能要放在这里
-  int pipeSymbol = 0;
-  int redirectSymbol = 0;
-  for(int i=0; i<sizeof(userInput); i++){
-    if(userInput[i] == '|') pipeSymbol = i;
-    if(userInput[i] == '>') redirectSymbol = i;
-  }
-  if(pipeSymbol > 0 && redirectSymbol > pipeSymbol) execPipeCmd(userInput);
-  else if(pipeSymbol == 0 &&  redirectSymbol>0) execRedirectCmd(userInput);
-  else if(pipeSymbol == 0 && redirectSymbol == 0) execSimpleCmd(userInput);
+int execNonPipeCmd(char* userInput, int* output, int* input){
+  char* redirectSymbol = strchr(userInput, '>');
+  if (redirectSymbol != NULL) execRedirectCmd(userInput);
   else{
-    // error: '>' before last '|'
-    printError();
+    execSimpleCmd(userInput, output, input);
+  }
+  return 0;
+}
+
+int execPipeCmd(char* userInput){
+  char* parsed[20];
+  int n=0;
+  parsed[n] = strtok(userInput, "|");
+  while(parsed[n] != NULL){
+    parsed[++n] = strtok(NULL, "|");
+  }
+  // printf("We have %d commands\n", n);
+
+  int p[2];
+  int pid;
+  int status;
+
+  pipe(p);
+  // write(p[1], " ", 64);
+  for(int i=0; i<n; i++){
+    // redirect
+    if((pid = fork())== 0){
+      if(i != n-1){
+        // dup2(*p, STDOUT_FILENO);
+        execNonPipeCmd(parsed[i], &p[1], &p[0]);
+        exit(0);
+      }
+      else{
+        execNonPipeCmd(parsed[i], NULL, &p[0]);
+        exit(0);
+      }
+    }
+    else{
+      int cpid = waitpid(pid, &status, 0);
+      if(i == n-1) close(p[0]);
+      close(p[1]);
+      // char str[64];
+      // sprintf(str, "%d", p[1]);
+      // strcat(parsed[i+1], str);
+      // check status, if error -> exit 
+      // printf("Return child %d\n", cpid);
+    }
+
+  }
+  return 0;
+}
+
+int parseSingleCommand(char* userInput){
+  // reverse + strchr
+  int pipe = 0;
+  int redirect = 0;
+  for(int i=0; i<strlen(userInput); i++){
+    if(userInput[i] == '|') pipe = i;
+    if(userInput[i] == '>') redirect = i;
+  }
+  if(pipe == 0){
+    execNonPipeCmd(userInput, NULL, NULL);
+  } 
+  else if(redirect == 0 || redirect > pipe){
+    execPipeCmd(userInput);
+  } 
+  else{
+    printError();// error: '>' before last '|'
   }
   return 0;
 }
@@ -150,6 +207,7 @@ int parseSequentialCommand(char* userInput){
   // sequential way
   char* token = strtok(userInput, ";");
   while(token != NULL){
+    printf("token is %s\n", token);
     if((pid = fork())== 0){
       parseSingleCommand(token);
       exit(0);
@@ -195,40 +253,25 @@ int getUserInput(char* userInput){
 }
 
 int checkMixingCommand(char* userInput){
-  int hasAnd;
-  int hasSemicolon;
-  int i;
 
-  hasAnd = 0;
-  hasSemicolon = 0;
+  const char and = '&';
+  const char semi = ';';
+  char *findAnd = strchr(userInput, and);
+  char *findSemi = strchr(userInput, semi);
 
-  for(i=0; i<sizeof(userInput); ++i){
-    // printf("char is %c\n", userInput[i]);
-    if(userInput[i] == '&'){
-      hasAnd = 1;
-    }
-    if(userInput[i] == ';'){
-      hasSemicolon = 1;
-    }
+  if(findAnd == NULL && findSemi == NULL){
+    parseSingleCommand(userInput);
+  } 
+  else if(findAnd == NULL && findSemi != NULL){
+    parseSequentialCommand(userInput);
   }
-
-  if (hasAnd == 0 && hasSemicolon == 0){
-    // single command mode
-    return 1;
-  }
-  else if (hasAnd == 1 && hasSemicolon == 0){
-    // parallel mode
-    return 2;
-  }
-  else if(hasAnd == 0 && hasSemicolon == 1){
-    // sequential mode
-    return 3;
+  else if(findAnd != NULL && findSemi == NULL){
+    parseParallelCommand(userInput);
   }
   else{
-    // error
-    return 0;
+    printError();
   }
-
+  return 0;
 }
 
 int main(){
@@ -243,22 +286,6 @@ int main(){
   //TODO: put while loop here, change prompt based on chdir ===================
   printf("520shell>");
   getUserInput(userInput);
-
-  commandType = checkMixingCommand(userInput);
-  switch (commandType) {
-    case 1:
-      parseSingleCommand(userInput);
-      break;
-    case 2:
-      parseParallelCommand(userInput);
-      break;
-    case 3:
-      parseSequentialCommand(userInput);
-      break;
-    default:
-      // TODO: error handling for invalid command
-      printf("mixed command error");
-      break;
-  }
+  checkMixingCommand(userInput);
   return 0;
 }
