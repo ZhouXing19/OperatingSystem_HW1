@@ -67,7 +67,12 @@ void runcmd(struct cmd *cmd) {
 		ecmd = (struct execcmd*) cmd;
 		if (ecmd->argv[0] == 0)
 			exit(0);
-
+		if (strcmp(ecmd->argv[0],"hello")==0)
+		{
+			printf("hello zhou!");
+			break;
+		}
+		
 		execvp(ecmd->argv[0], ecmd->argv);
 
 		break;
@@ -131,26 +136,7 @@ int getcmd(char *buf, int nbuf) {
 	return 0;
 }
 
-int main(void) {
-	static char buf[100];
-	int fd, r;
 
-	// Read and run input commands.l
-	while (getcmd(buf, sizeof(buf)) >= 0) {
-		if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
-			// Clumsy but will have to do for now.
-			// Chdir has no effect on the parent if run in the child.
-			buf[strlen(buf) - 1] = 0; // chop \n
-			if (chdir(buf + 3) < 0)
-				fprintf(stderr, "cannot cd %s\n", buf + 3);
-			continue;
-		}
-		if (fork1() == 0)
-			runcmd(parsecmd(buf));
-		wait(&r);
-	}
-	exit(0);
-}
 
 int fork1(void) {
 	int pid;
@@ -213,6 +199,8 @@ int gettoken(char **ps, char *es, char **q, char **eq) {
 		s++;
 	if (q)
 		*q = s;
+	// q：第一个不再whitespace里的字符的地址
+	// ret：这个字符
 	ret = *s;
 	switch (*s) {
 	case 0:
@@ -242,10 +230,17 @@ int gettoken(char **ps, char *es, char **q, char **eq) {
 int peek(char **ps, char *es, char *toks) {
 	char *s;
 
+	//s是string ps的头指针 （指向第一个char的指针）
+	//ps是指向string的头的指针（也是指向第一个char的指针吧）
 	s = *ps;
+	//遍历ps的每个字符是不是出现在 char whitespace[] = " \t\r\n\v"; 中
 	while (s < es && strchr(whitespace, *s))
 		s++;
+	//把 指向string头的指针改成s --> string的头变成了s 
+	//（string只保留s及后面的部分）
 	*ps = s;
+
+	//判断这个新的开头字符是不是非空且出现在toks里
 	return *s && strchr(toks, *s);
 }
 
@@ -327,6 +322,8 @@ parseredirs(struct cmd *cmd, char **ps, char *es) {
 
 struct cmd*
 parseexec(char **ps, char *es) {
+	// ps: "ls | grep .c " / ps: "grep.c"
+	//printf("*ps=%s, es=%s ",*ps,es);
 	char *q, *eq;
 	int tok, argc;
 	struct execcmd *cmd;
@@ -339,6 +336,7 @@ parseexec(char **ps, char *es) {
 	ret = parseredirs(ret, ps, es);
 //	printf("argv:");
 	while (!peek(ps, es, "|")) {
+			printf("\n *ps=%s, es=%s, q=%s, eq=%s \n",*ps,es,q,eq);
 		if ((tok = gettoken(ps, es, &q, &eq)) == 0)
 			break;
 		if (tok != 'a') {
@@ -361,3 +359,27 @@ parseexec(char **ps, char *es) {
 	
 	return ret;
 }
+
+int main(void) {
+	static char buf[100];
+	int fd, r;
+
+	// Read and run input commands.l
+	while (getcmd(buf, sizeof(buf)) >= 0) {
+		if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
+			// Clumsy but will have to do for now.
+			// Chdir has no effect on the parent if run in the child.
+			buf[strlen(buf) - 1] = 0; // chop \n
+			if (chdir(buf + 3) < 0)
+				fprintf(stderr, "cannot cd %s\n", buf + 3);
+			continue;
+		}
+		if (fork1() == 0)
+			runcmd(parsecmd(buf));
+		wait(&r);
+	}
+	exit(0);
+}
+
+
+

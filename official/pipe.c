@@ -52,7 +52,7 @@ static int command(int input, int first, int last)
 
 		if (strcmp(args[0],"hello")==0)
 		{
-			printf("hello zhou!");
+			write(STDOUT_FILENO, "hello zhou", strlen("hello zhou"));
 		}
 
 		////////////// 上面是buildin 
@@ -143,7 +143,7 @@ static void split(char* cmd)
 		next = strchr(cmd, '\n');
 		//cmd = "ls"
 		if(next == NULL){
-			args[i] = NULL;
+			args[i+1] = NULL;
 			return ;
 		}
 		next[0] = '\0';
