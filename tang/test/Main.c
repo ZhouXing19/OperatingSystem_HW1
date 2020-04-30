@@ -1,36 +1,40 @@
+#include<ctype.h>
 #include<errno.h>
 #include<fcntl.h>
 #include<limits.h>
 #include<stdio.h>
 #include<string.h> 
 #include<stdlib.h> 
-#include <stdbool.h>
+#include<stdbool.h>
 #include<unistd.h> 
 #include<readline/readline.h> 
 
 # define MAX_INPUT_LEN 64
-
 
 // STEP 4 Syntax Error *********************************************************
 void printError(){
   char error_message[30] = "An ERROR has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
   exit(0);
-  // TODO: exit gracefully: process or program, where to put exit(0) -> Notes 1
-  // exit from the shell？？
-  // for extra args, you should print an error message to stderr and then exit gracefully.
 }
 
 // STEP 3 **********************************************************************
 int execRedirectCmd(char* userInput){
     char* cmd = strtok(userInput, ">");
+    //printf("In redirect, cmd is %s\n", cmd);
     char* output_fd = strtok(NULL, " ");
     // check invalid input eg. ls > out1 out2
+    //printf("Outputfile is %s\n", output_fd);
     char* extra = strtok(NULL, " ");
-    if(extra == NULL) printError();
+    if(extra != NULL){
+      printError();
+    }
 
-    int fd1 = open("output_fd", O_RDWR); 
-    if (fd1 < 0) exit(1); // TODO: exit(0 or 1)
+    int fd1 = open(output_fd, O_RDWR | O_CREAT | O_TRUNC); 
+    if (fd1 < 0){
+      return 1; 
+    }  // TODO: exit(0 or 1)
+
     // separate cmd part
     int p=0;
     char* parsed[20];
@@ -51,14 +55,17 @@ int execRedirectCmd(char* userInput){
     return 0;
 }
 
-int execPipeCmd(char* userInput){
-  return 0;
-}
 
-int execSimpleCmd(char* userInput){
+int execSimpleCmd(char* userInput, int* output, int* input){
+  // check if dup2 is needed
+  if (input != NULL) dup2(*input, STDIN_FILENO);
+  if (output != NULL) dup2(*output, STDOUT_FILENO);
+  // copy user input for echo parsing
   char copyInput[64];
   strcpy (copyInput, userInput);
   int quote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
+
+  // general parsing
   char* parsed[20];
   int i=0;
   parsed[i] = strtok(userInput, " ");
@@ -80,10 +87,9 @@ int execSimpleCmd(char* userInput){
     // case 1: no args
     if(parsed[1] == NULL){
       printf("\n");
-      return 0;
     } 
     // case 2: arg starts with '\' 
-    if(parsed[1][0] == '\''){
+    else if(parsed[1][0] == '\''){
       printError();
     }
     // case 3: arg starts with " 
@@ -92,11 +98,11 @@ int execSimpleCmd(char* userInput){
       char* str = strtok(NULL, "\""); 
       char* rest = strtok(NULL, "\"");
       if(rest != NULL || quote == 1){
-        if(str == NULL) str = "";
         printf("%s\n", str);
       }
       else{
-        printError(); // without trailing "
+        // without trailing "
+        printError();
       }
     }
     // case 4: normal case: echo arg
@@ -106,7 +112,7 @@ int execSimpleCmd(char* userInput){
   }
 
   else if(strcmp(parsed[0],"pwd")==0){
-    if(parsed[1] == NULL) printError(); // extra arg error
+    if(parsed[1] != NULL) printError(); // extra arg error
     char cwd[1024]; 
 	  getcwd(cwd, sizeof(cwd)); 
 	  printf("%s\n", cwd);
@@ -114,49 +120,95 @@ int execSimpleCmd(char* userInput){
 
   // system function:
   else{
-    printf("System function - - cmd is %s\n", parsed[0]);
-    int res = execvp(parsed[0], parsed);
-    printf("result is %d\n", res);
+    execvp(parsed[0], parsed);
   }
-    return 0;
+
+  if(input != NULL) close(*input);
+  if(output != NULL) close(*output);
+  return 0;
 }
 
 // STEP 2 **********************************************************************
-int parseSingleCommand(char* userInput){
-  // case 1: pipeline
-  // case 2: redirection
-  // case 3: build-in or system function
-  // TODO: fork()可能要放在这里
-  int pipeSymbol = 0;
-  int redirectSymbol = 0;
-  for(int i=0; i<sizeof(userInput); i++){
-    if(userInput[i] == '|') pipeSymbol = i;
-    if(userInput[i] == '>') redirectSymbol = i;
-  }
-  if(pipeSymbol > 0 && redirectSymbol > pipeSymbol) execPipeCmd(userInput);
-  else if(pipeSymbol == 0 &&  redirectSymbol>0) execRedirectCmd(userInput);
-  else if(pipeSymbol == 0 && redirectSymbol == 0) execSimpleCmd(userInput);
+int execNonPipeCmd(char* userInput, int* output, int* input){
+  char* redirectSymbol = strchr(userInput, '>');
+  if (redirectSymbol != NULL) execRedirectCmd(userInput);
   else{
-    // error: '>' before last '|'
-    printError();
+    execSimpleCmd(userInput, output, input);
+  }
+  return 0;
+}
+
+int execPipeCmd(char* userInput){
+  char* parsed[20];
+  int n=0;
+  parsed[n] = strtok(userInput, "|");
+  while(parsed[n] != NULL){
+    parsed[++n] = strtok(NULL, "|");
+  }
+
+  int p[2];
+  int pid;
+  int status;
+
+  if(pipe(p)<0) return 1;
+
+  for(int i=0; i<n; i++){
+    if((pid = fork())== 0){
+      if(i != n-1){
+        execNonPipeCmd(parsed[i], &p[1], &p[0]);
+        exit(0);
+      }
+      else{
+        execNonPipeCmd(parsed[i], NULL, &p[0]);
+        exit(0);
+      }
+    }
+    else{
+      int cpid = waitpid(pid, &status, 0);
+      if(i == n-1) close(p[0]);
+      close(p[1]);
+      // printf("Return child %d\n", cpid);
+    }
+
+  }
+  return 0;
+}
+
+int parseSingleCommand(char* userInput){
+  // reverse + strchr
+  int pipe = 0;
+  int redirect = 0;
+  for(int i=0; i<strlen(userInput); i++){
+    if(userInput[i] == '|') pipe = i;
+    if(userInput[i] == '>') redirect = i;
+  }
+  if(pipe == 0){
+    execNonPipeCmd(userInput, NULL, NULL);
+  } 
+  else if(redirect == 0 || redirect > pipe){
+    execPipeCmd(userInput);
+  } 
+  else{
+    printError();// error: '>' before last '|'
   }
   return 0;
 }
 
 int parseSequentialCommand(char* userInput){
-  printf("--- Sequential Command\n");
   int status;
   pid_t pid;
   // sequential way
   char* token = strtok(userInput, ";");
   while(token != NULL){
-    if((pid = fork())== 0){
+    pid = fork();
+    if(pid < 0) return 1;
+    else if(pid == 0){
       parseSingleCommand(token);
       exit(0);
     }
     else{
       int cpid = waitpid(pid, &status, 0);
-      printf("Return child %d\n", cpid);
+      // printf("Return child %d\n", cpid);
     }
     token = strtok(NULL, ";");
   }
@@ -164,12 +216,14 @@ int parseSequentialCommand(char* userInput){
 }
 
 int parseParallelCommand(char* userInput){
-  printf("--- Parallel Command\n");
+  // printf("--- Parallel Command\n");
   int i, status;
   pid_t pid;
   char* token = strtok(userInput, "&");
   while(token != NULL){
-    if((pid = fork())== 0){
+    pid = fork();
+    if(pid < 0) return 1;
+    if( pid == 0){
       parseSingleCommand(token);
       exit(0);
     }
@@ -178,7 +232,7 @@ int parseParallelCommand(char* userInput){
 
   while (wait(NULL) != -1){
     pid_t cpid = waitpid(pid, &status, 0);
-    printf("Return child %d\n", cpid);
+    // printf("Return child %d\n", cpid);
   }
   return 0;
 }
@@ -189,76 +243,76 @@ int getUserInput(char* userInput){
   char buf[MAX_INPUT_LEN]; 
   fgets(buf, MAX_INPUT_LEN, stdin);
   char *token = strtok(buf, "\n");
-  if (strlen(token)>MAX_INPUT_LEN) printError();
+  if (strlen(token) == MAX_INPUT_LEN) printError();
   strcpy(userInput, buf);
   return 0;
 }
 
 int checkMixingCommand(char* userInput){
-  int hasAnd;
-  int hasSemicolon;
-  int i;
+  int status;
+  pid_t pid = fork();
+  if(pid < 0) return 1;
+  else if(pid == 0){
+    const char and = '&';
+    const char semi = ';';
+    char *findAnd = strchr(userInput, and);
+    char *findSemi = strchr(userInput, semi);
 
-  hasAnd = 0;
-  hasSemicolon = 0;
-
-  for(i=0; i<sizeof(userInput); ++i){
-    // printf("char is %c\n", userInput[i]);
-    if(userInput[i] == '&'){
-      hasAnd = 1;
+    if(findAnd == NULL && findSemi == NULL){
+      parseSingleCommand(userInput);
+    } 
+    else if(findAnd == NULL && findSemi != NULL){
+      parseSequentialCommand(userInput);
     }
-    if(userInput[i] == ';'){
-      hasSemicolon = 1;
+    else if(findAnd != NULL && findSemi == NULL){
+      parseParallelCommand(userInput);
     }
-  }
-
-  if (hasAnd == 0 && hasSemicolon == 0){
-    // single command mode
-    return 1;
-  }
-  else if (hasAnd == 1 && hasSemicolon == 0){
-    // parallel mode
-    return 2;
-  }
-  else if(hasAnd == 0 && hasSemicolon == 1){
-    // sequential mode
-    return 3;
+    else{
+      printError();
+    }
   }
   else{
-    // error
-    return 0;
+    int cpid1 = waitpid(pid, &status, 0);
   }
-
+  return 0;
 }
 
-int main(){
-  // print current working directory
-  // get user input
-  // parse user input && check invalid input
-
-  // WHILE LOOP
+int main(int argc, char** argv){
   char userInput[MAX_INPUT_LEN];
   int commandType;
 
-  //TODO: put while loop here, change prompt based on chdir ===================
-  printf("520shell>");
-  getUserInput(userInput);
+  FILE *file = NULL;
+  char buffer[MAX_INPUT_LEN];
 
-  commandType = checkMixingCommand(userInput);
-  switch (commandType) {
-    case 1:
-      parseSingleCommand(userInput);
-      break;
-    case 2:
-      parseParallelCommand(userInput);
-      break;
-    case 3:
-      parseSequentialCommand(userInput);
-      break;
-    default:
-      // TODO: error handling for invalid command
-      printf("mixed command error");
-      break;
+  // interactive mode
+  if(argc == 1){
+     while(strcmp(userInput,"bye") != 0){
+      printf("520shell>");
+      getUserInput(userInput);
+      checkMixingCommand(userInput);
+     }
+  }
+
+  // batch mode
+  else if(argc == 2){
+    char *bFile= strdup(argv[1]);
+    if((file = fopen(bFile, "r")) == NULL){
+      printError();
+      return 0;
+    }
+
+    while(fgets(buffer, MAX_INPUT_LEN, file)){
+      char *token = strtok(buffer, "\n");
+      if (strlen(token) == MAX_INPUT_LEN){
+        printError();
+        continue;
+      } 
+      checkMixingCommand(token);
+    }
+  }
+  // extra input file
+  else {
+    printError();
   }
   return 0;
 }
