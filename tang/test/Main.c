@@ -57,7 +57,8 @@ int execSingleCmd(char* userInput){
     else if(strcmp(parsed[0],"echo")==0){
       // case 1: no args
       if(parsed[1] == NULL){
-        printf("\n");
+        write(STDOUT_FILENO, "\n", 1);
+        //printf("\n");
       } 
       // case 2: arg starts with '\' 
       else if(parsed[1][0] == '\\'){
@@ -69,8 +70,14 @@ int execSingleCmd(char* userInput){
         char* str = strtok(NULL, "\""); 
         char* rest = strtok(NULL, "\"");
         if(rest != NULL || quote == 1){
-          if(str == NULL) str = "";
-          printf("%s\n", str);
+          if(str == NULL) write(STDOUT_FILENO, "\n", 1);
+          else{
+          str = strcat(str, "\n");
+          write(STDOUT_FILENO, str, strlen(str));
+          }
+
+  
+          //printf("%s\n", str);
         }
         else{
           // without trailing "
@@ -79,7 +86,9 @@ int execSingleCmd(char* userInput){
       }
       // case 4: normal case: echo arg
       else{
-        printf("%s\n", parsed[1]);
+        char *str = strcat(parsed[1], "\n");
+        write(STDOUT_FILENO, str, strlen(str));
+        //printf("%s\n", parsed[1]);
       }
     }
 
@@ -87,7 +96,9 @@ int execSingleCmd(char* userInput){
       if(parsed[1] != NULL) printError(); // extra arg error
       char cwd[1024]; 
 	    getcwd(cwd, sizeof(cwd)); 
-	    printf("%s\n", cwd);
+      char *str = strcat(cwd, "\n");
+      write(STDOUT_FILENO, str, strlen(str));
+	    //printf("%s\n", cwd);
     }
 
     // system function:
@@ -283,11 +294,10 @@ int main(int argc, char** argv){
   // interactive mode
   if(argc == 1){
     while(strcmp(userInput,"bye") != 0){
-      printf("520shell>");
+      write(STDOUT_FILENO, "520shell>", 9);
+      //printf("520shell>");
       getUserInput(userInput);
       checkMixingCommand(userInput);
-      printf("last user input is %s \n", userInput);
-      // userInput = strtok(userInput, " ");
     }
   }
 

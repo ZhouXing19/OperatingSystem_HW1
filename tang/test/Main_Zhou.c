@@ -306,42 +306,44 @@ int checkMixingCommand(char* userInput){
   return 0;
 }
 
+
 int main(int argc, char** argv){
-  char userInput[MAX_INPUT_LEN];
-  int commandType;
+//   char userInput[MAX_INPUT_LEN];
+//   int commandType;
 
-  FILE *file = NULL;
-  char buffer[MAX_INPUT_LEN];
+//   FILE *file = NULL;
+//   char buffer[MAX_INPUT_LEN];
 
-  // interactive mode
-  if(argc == 1){
-    while(strcmp(userInput,"bye") != 0){
-      printf("520shell>");
-      getUserInput(userInput);
-      checkMixingCommand(userInput);
-    }
-  }
+//   // interactive mode
+//   if(argc == 1){
+//     while(strcmp(userInput,"bye") != 0){
+//       printf("520shell>");
+//       getUserInput(userInput);
+//       checkMixingCommand(userInput);
+//     }
+//   }
 
-  // batch mode
-  else if(argc == 2){
-    char *bFile= strdup(argv[1]);
-    if((file = fopen(bFile, "r")) == NULL){
-      printError();
-      return 0;
-    }
+//   // batch mode
+//   else if(argc == 2){
+//     char *bFile= strdup(argv[1]);
+//     if((file = fopen(bFile, "r")) == NULL){
+//       printError();
+//       return 0;
+//     }
 
-    while(fgets(buffer, MAX_INPUT_LEN, file)){
-      char *token = strtok(buffer, "\n");
-      if (strlen(token) == MAX_INPUT_LEN){
-        printError();
-        continue;
-      } 
-      checkMixingCommand(token);
-    }
-  }
-  // extra input file
-  else {
-    printError();
-  }
+//     while(fgets(buffer, MAX_INPUT_LEN, file)){
+//       char *token = strtok(buffer, "\n");
+//       if (strlen(token) == MAX_INPUT_LEN){
+//         printError();
+//         continue;
+//       } 
+//       checkMixingCommand(token);
+//     }
+//   }
+//   // extra input file
+//   else {
+//     printError();
+//   }
+
   return 0;
 }
