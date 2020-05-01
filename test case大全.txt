@@ -1,6 +1,0 @@
-.mysh> echo abc | grep a
-.mysh> abc
-
-.mysh> echo abc | grep d
-.mysh>
-
