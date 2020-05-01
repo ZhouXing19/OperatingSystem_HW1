@@ -1,2 +1,0 @@
-exit(0) 如果在multiprocess里面， 只退出单个proccess
-没有测试过 exit（0）在while loop里面的情况

@@ -15,17 +15,20 @@
 void printError(){
   char error_message[30] = "An ERROR has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
-  exit(0);
 }
 
 int execSingleCmd(char* userInput){
+  bool redirect;
+  int saved_stdout;
   if(strchr(userInput, '>') != NULL){
-      userInput = strtok(userInput, ">");
-      char* output_file = strtok(NULL, " ");
-      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
-      if (fd < 0) return 1;
-      dup2(fd, STDOUT_FILENO);
-    }
+    redirect = true;
+    saved_stdout = dup(1);
+    userInput = strtok(userInput, ">");
+    char* output_file = strtok(NULL, " ");
+    int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
+    if (fd < 0) return 1;
+    dup2(fd, STDOUT_FILENO);
+  }
 
     // copy user input for echo parsing
     char copyInput[64];
@@ -40,22 +43,32 @@ int execSingleCmd(char* userInput){
       parsed[++i] = strtok(NULL, " ");
     }
 
+    
     if(strcmp(parsed[0],"bye") == 0){
       if(parsed[1]==NULL){
+        userInput = "bye"; // in seq or par -> terminate parent process
         exit(0); // exit successfully
-      } 
-      printError(); // extra arg error
+      }
+      else{
+        userInput = strcat(parsed[0], "  "); // 防止main while exit
+        printError(); // extra arg error
+      }
     } 
+
   
     else if(strcmp(parsed[0],"cd")==0){
-      if (parsed[2]!= NULL)  printError(); // extra arg error
+      if (strcmp(parsed[0], "") != 0 && parsed[2]!= NULL) {
+        printError(); 
+        return 0;
+      } 
       int res = parsed[1] == NULL? chdir(getenv("HOME")): chdir(parsed[1]);
     }
   
     else if(strcmp(parsed[0],"echo")==0){
       // case 1: no args
       if(parsed[1] == NULL){
-        printf("\n");
+        write(STDOUT_FILENO, "\n", 1);
+        //printf("\n");
       } 
       // case 2: arg starts with '\' 
       else if(parsed[1][0] == '\\'){
@@ -67,8 +80,11 @@ int execSingleCmd(char* userInput){
         char* str = strtok(NULL, "\""); 
         char* rest = strtok(NULL, "\"");
         if(rest != NULL || quote == 1){
-          if(str == NULL) str = "";
-          printf("%s\n", str);
+          if(str == NULL) write(STDOUT_FILENO, "\n", 1);
+          else{
+            str = strcat(str, "\n");
+            write(STDOUT_FILENO, str, strlen(str));
+          }
         }
         else{
           // without trailing "
@@ -77,7 +93,9 @@ int execSingleCmd(char* userInput){
       }
       // case 4: normal case: echo arg
       else{
-        printf("%s\n", parsed[1]);
+        char *str = strcat(parsed[1], "\n");
+        write(STDOUT_FILENO, str, strlen(str));
+        //printf("%s\n", parsed[1]);
       }
     }
 
@@ -85,12 +103,28 @@ int execSingleCmd(char* userInput){
       if(parsed[1] != NULL) printError(); // extra arg error
       char cwd[1024]; 
 	    getcwd(cwd, sizeof(cwd)); 
-	    printf("%s\n", cwd);
+      char *str = strcat(cwd, "\n");
+      write(STDOUT_FILENO, str, strlen(str));
+	    //printf("%s\n", cwd);
     }
 
     // system function:
     else{
-      execvp(parsed[0], parsed);
+
+      int status;
+      pid_t pid = fork();
+      if(pid==0){
+          execvp(parsed[0], parsed);
+      }
+      else{
+        int cpid = waitpid(pid, &status, 0);
+        if(redirect){ //防止redirect之后print到文件中
+          dup2(saved_stdout, 1);
+        }
+      }
+    }
+    if(redirect){
+      dup2(saved_stdout, 1); //防止redirect之后print到文件中
     }
   return 0;
 }
@@ -179,7 +213,7 @@ int parseSingleCommand(char* userInput){
     execPipeCmd(userInput);
   } 
   else{
-    printError();// error: '>' before last '|'
+    printError(); // error: '>' before last '|'
   }
   return 0;
 }
@@ -187,19 +221,41 @@ int parseSingleCommand(char* userInput){
 int parseSequentialCommand(char* userInput){
   int status;
   pid_t pid;
+
+  char* tokens[20];
+  int i=0;
+  tokens[i] = strtok(userInput, ";");
+  while(tokens[i] != NULL){
+    tokens[++i] = strtok(NULL, ";");
+  }
+  int k = 0;
   // sequential way
-  char* token = strtok(userInput, ";");
+  char* token = tokens[k];
   while(token != NULL){
     pid = fork();
     if(pid < 0) return 1;
-    else if(pid == 0){
+    
+    else if(pid == 0){ // child process
       parseSingleCommand(token);
       exit(0);
     }
-    else{
+    else{ // parent process
       int cpid = waitpid(pid, &status, 0);
     }
-    token = strtok(NULL, ";");
+    // -------- check bye
+    char* parsed[20];
+    int i=0;
+    parsed[i] = strtok(token, " ");
+    while(parsed[i] != NULL){
+      parsed[++i] = strtok(NULL, " ");
+    }
+    if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
+      userInput = "bye"; // in seq or par -> terminate parent process
+      exit(0); // exit successfully
+    }
+    // printf("back token is %s\n", token);
+    // token = strtok(NULL, ";");
+    token = tokens[++k];
   }
   return 0;
 }
@@ -208,7 +264,16 @@ int parseParallelCommand(char* userInput){
   // printf("--- Parallel Command\n");
   int i, status;
   pid_t pid;
-  char* token = strtok(userInput, "&");
+  char* tokens[20];
+  int j=0;
+  tokens[j] = strtok(userInput, "&");
+  while(tokens[j] != NULL){
+    tokens[++j] = strtok(NULL, "&");
+  }
+
+  int k = 0;
+  char* token = tokens[k];
+
   while(token != NULL){
     pid = fork();
     if(pid < 0) return 1;
@@ -216,7 +281,7 @@ int parseParallelCommand(char* userInput){
       parseSingleCommand(token);
       exit(0);
     }
-    token = strtok(NULL, "&");
+    token = tokens[++k];
   }
 
   while (wait(NULL) != -1){
@@ -237,16 +302,14 @@ int getUserInput(char* userInput){
 }
 
 int checkMixingCommand(char* userInput){
-  int status;
-  pid_t pid = fork();
-  if(pid < 0) return 1;
-  else if(pid == 0){
+
     const char and = '&';
     const char semi = ';';
     char *findAnd = strchr(userInput, and);
     char *findSemi = strchr(userInput, semi);
 
     if(findAnd == NULL && findSemi == NULL){
+      
       parseSingleCommand(userInput);
     } 
     else if(findAnd == NULL && findSemi != NULL){
@@ -258,10 +321,7 @@ int checkMixingCommand(char* userInput){
     else{
       printError();
     }
-  }
-  else{
-    int cpid1 = waitpid(pid, &status, 0);
-  }
+
   return 0;
 }
 
@@ -275,11 +335,9 @@ int main(int argc, char** argv){
   // interactive mode
   if(argc == 1){
     while(strcmp(userInput,"bye") != 0){
-      printf("520shell>");
+      write(STDOUT_FILENO, "520shell> ", 10);
       getUserInput(userInput);
       checkMixingCommand(userInput);
-      printf("last user input is %s \n", userInput);
-      // userInput = strtok(userInput, " ");
     }
   }
 
