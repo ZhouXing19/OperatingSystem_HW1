@@ -18,34 +18,15 @@ void printError(){
   exit(0);
 }
 
-// STEP 3 **********************************************************************
-int execSimpleCmd(char* userInput, bool inPipe, bool first, bool last, int input){
-  int p[2];
-  int status;
-  if (inPipe) pipe(p);
-  pid_t pid = fork();
-
-  if(pid == 0){
-    if(inPipe && first){
-      dup2(p[1], STDOUT_FILENO);
-    }
-    else if(inPipe && last){
-      dup2(input, STDIN_FILENO);
-    }
-    else if(inPipe){
-      dup2(p[1], STDOUT_FILENO);
-      dup2(input, STDIN_FILENO);
-    }
-    // =================================================================
-    if(strchr(userInput, '>') != NULL){
+int execSingleCmd(char* userInput){
+  if(strchr(userInput, '>') != NULL){
       userInput = strtok(userInput, ">");
       char* output_file = strtok(NULL, " ");
-      printf("userInput in redirec is %s\n", userInput);
-      printf("output file in redirec is %s\n", output_file);
       int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
       if (fd < 0) return 1;
       dup2(fd, STDOUT_FILENO);
     }
+
     // copy user input for echo parsing
     char copyInput[64];
     strcpy (copyInput, userInput);
@@ -60,7 +41,9 @@ int execSimpleCmd(char* userInput, bool inPipe, bool first, bool last, int input
     }
 
     if(strcmp(parsed[0],"bye") == 0){
-      if(parsed[1]==NULL) exit(0); // exit successfully
+      if(parsed[1]==NULL){
+        exit(0); // exit successfully
+      } 
       printError(); // extra arg error
     } 
   
@@ -109,6 +92,32 @@ int execSimpleCmd(char* userInput, bool inPipe, bool first, bool last, int input
     else{
       execvp(parsed[0], parsed);
     }
+  return 0;
+}
+
+// STEP 3 **********************************************************************
+int pipefork(char* userInput, bool inPipe, bool first, bool last, int input){
+  int p[2];
+  int status;
+  if (inPipe) pipe(p);
+  pid_t pid = fork();
+
+  if(pid == 0){
+    if(inPipe && first){
+      dup2(p[1], STDOUT_FILENO);
+    }
+    else if(inPipe && last){
+      dup2(input, STDIN_FILENO);
+    }
+    else if(inPipe){
+      dup2(p[1], STDOUT_FILENO);
+      dup2(input, STDIN_FILENO);
+    }
+    execSingleCmd(userInput);
+    exit(0);
+  }
+  else{
+    int cpid = waitpid(pid, &status, 0);
   }
 
   if(inPipe){
@@ -135,13 +144,13 @@ int execPipeCmd(char* userInput){
 
   for(int i=0; i<n; i++){
     if(i == 0){
-      input = execSimpleCmd(parsed[i], true, true, false, input);
+      input = pipefork(parsed[i], true, true, false, input);
     }
     else if(i == n-1){
-      input = execSimpleCmd(parsed[i], true, false, true, input);
+      input = pipefork(parsed[i], true, false, true, input);
     }
     else{
-      input = execSimpleCmd(parsed[i], true, false, false, input);
+      input = pipefork(parsed[i], true, false, false, input);
     }
   }
 
@@ -163,8 +172,8 @@ int parseSingleCommand(char* userInput){
     if(userInput[i] == '|') pipe = i;
     if(userInput[i] == '>') redirect = i;
   }
-  if(pipe == 0){
-    execSimpleCmd(userInput, false, false, false, 0);
+  if(pipe == -1){
+    execSingleCmd(userInput);
   } 
   else if(redirect == -1 || redirect > pipe){
     execPipeCmd(userInput);
@@ -269,6 +278,8 @@ int main(int argc, char** argv){
       printf("520shell>");
       getUserInput(userInput);
       checkMixingCommand(userInput);
+      printf("last user input is %s \n", userInput);
+      // userInput = strtok(userInput, " ");
     }
   }
 

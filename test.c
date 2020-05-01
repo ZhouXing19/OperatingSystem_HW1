@@ -9,21 +9,14 @@
 #include<unistd.h> 
 #include<readline/readline.h> 
 int exec(){
-  printf("Where is my miu? \n");
-  int fd = open("x2.txt", O_RDWR | O_CREAT | O_TRUNC);
-  if(fd>0){
-    dup2(fd, STDOUT_FILENO);
-    printf("Here is my miu\n");
+  for(int i = 0; i< 5; i++){
+    if(i == 3) exit(0);
+    printf("i is id %d\n", i);
   }
   return 0;
 }
 
 int main(){
-  int fd = open("x1.txt", O_RDWR | O_CREAT | O_TRUNC);
-  printf("before dup2");
-  if(fd>0){
-    dup2(fd, STDOUT_FILENO);
-    exec();
-  }
-  printf("Out of scope");
+  exec();
+  printf("still her e\n");
 }

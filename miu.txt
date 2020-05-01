@@ -1,3 +1,10 @@
+Main.c
+Notes.txt
+miu.txt
+mysh
+nani
 passcase.txt
 pipe.c
+res
 sep.c
+test.c
