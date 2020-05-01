@@ -287,6 +287,22 @@ int parseParallelCommand(char* userInput){
   while (wait(NULL) != -1){
     pid_t cpid = waitpid(pid, &status, 0);
   }
+
+  for(int t=0; t<20; t++){
+    token = tokens[t];
+    if(token == NULL) break;
+    char* parsed[20];
+    int i=0;
+    parsed[i] = strtok(token, " ");
+    while(parsed[i] != NULL){
+      parsed[++i] = strtok(NULL, " ");
+    }
+    if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
+      userInput = "bye"; // in seq or par -> terminate parent process
+      exit(0); // exit successfully
+    }
+  }
+
   return 0;
 }
 
