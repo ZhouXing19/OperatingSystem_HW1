@@ -52,10 +52,14 @@ int execSingleCmd(char* userInput, bool fromParallel){
     char* parsed[20];
     int i=0;
     parsed[i] = strtok(userInput, " ");
-    // parsed[i] = strtok(parsed[i], "\t");
     while(parsed[i] != NULL){
+      if(strchr(parsed[i], '\t') != NULL){
+      char * copy1 = parsed[0];
+      char* fst = strtok(copy1, "\t");
+      char* snd = strtok(NULL, "\t");
+      parsed[i] = (fst == NULL)? snd : fst;
+    }
       parsed[++i] = strtok(NULL, " ");
-      // parsed[i] = strtok(parsed[i], "\t");
     }
 
     //Regarding parallel mode: all built-in commands should return 
