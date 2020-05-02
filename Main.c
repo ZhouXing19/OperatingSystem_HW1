@@ -54,7 +54,6 @@ int execSingleCmd(char* userInput, bool fromParallel){
     parsed[i] = strtok(userInput, " ");
     while(parsed[i] != NULL){
       parsed[++i] = strtok(NULL, " ");
-      printf("i id %d, cmd is %s----\n", i, parsed[i-1]);
     }
     if(strcmp(parsed[i-1], " ") == 0 || strcmp(parsed[i-1], "\t")== 0){
       parsed[i-1] = NULL;
