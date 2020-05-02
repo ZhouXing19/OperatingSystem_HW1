@@ -20,15 +20,9 @@ void printError(){
 int execSingleCmd(char* userInput, bool fromParallel){
   bool redirect;
   int saved_stdout;
-  if(strchr(userInput, '>') != NULL){
-    redirect = true;
-    saved_stdout = dup(1);
-    userInput = strtok(userInput, ">");
-    char* output_file = strtok(NULL, " ");
-    int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
-    if (fd < 0) return 1;
-    // dup2(fd, STDOUT_FILENO);
-  }
+
+  char redInput[64];
+  strcpy(redInput, userInput);
 
     // copy user input for echo parsing
     char copyInput[64];
@@ -48,10 +42,21 @@ int execSingleCmd(char* userInput, bool fromParallel){
     char* parsed[20];
     int i=0;
     parsed[i] = strtok(userInput, " ");
+    // parsed[i] = strtok(parsed[i], "\t");
     while(parsed[i] != NULL){
       parsed[++i] = strtok(NULL, " ");
+      // parsed[i] = strtok(parsed[i], "\t");
     }
 
+    if(parsed[1]!= NULL && parsed[1][0] != '\'' && parsed[1][0] !='\"' && strchr(userInput, '>') != NULL){
+      redirect = true;
+      saved_stdout = dup(1);
+      userInput = strtok(redInput, ">");
+      char* output_file = strtok(NULL, " ");
+      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
+      if (fd < 0) return 1;
+      dup2(fd, STDOUT_FILENO);
+    }
     //Regarding parallel mode: all built-in commands should return 
     //an error message in parallel mode.
     if(fromParallel && (strcmp(parsed[0],"bye") == 0 || 
@@ -86,6 +91,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
     }
   
     else if(strcmp(parsed[0],"echo")==0){
+
       // case 1: no args
       if(parsed[1] == NULL){
         write(STDOUT_FILENO, "\n", 1);
@@ -105,7 +111,9 @@ int execSingleCmd(char* userInput, bool fromParallel){
         }
         char* cmd = strtok(copyInput, "\"");
         char* str = strtok(NULL, "\""); 
-        if(str == NULL) write(STDOUT_FILENO, "\n", 1);
+        if(str == NULL){
+          write(STDOUT_FILENO, "\n", 1);
+        } 
         else{
           str = strcat(str, "\n");
           write(STDOUT_FILENO, str, strlen(str));
@@ -281,10 +289,8 @@ int parseSequentialCommand(char* userInput){
       parsed[++i] = strtok(NULL, " ");
     }
     if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
-      printf("here4\n");
       userInput = "bye"; // in seq or par -> terminate parent process
       exit(0); // exit successfully
-      printf("here5\n");
     }
     // printf("back token is %s\n", token);
     // token = strtok(NULL, ";");
@@ -416,10 +422,11 @@ int main(int argc, char** argv){
         return 0;
       }
       if (strlen(token) >= MAX_INPUT_LEN){
-        // printError();
         // return 1;
+        continue;
       }
       else{
+        printf("chao guole \n");
         checkMixingCommand(token);
       }
     }

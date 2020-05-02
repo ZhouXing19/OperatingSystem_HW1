@@ -1,4 +1,4 @@
-ls -la /bin > results/fout
+ls -la /bin; cal; who;
 total 4896
 drwxr-xr-x@ 38 root  wheel     1216 Feb 29 15:39 .
 drwxr-xr-x  24 root  admin      768 Feb 29 15:40 ..
@@ -38,3 +38,13 @@ drwxr-xr-x  24 root  admin      768 Feb 29 15:40 ..
 -rwxr-xr-x   1 root  wheel    37312 Jan 23 07:59 unlink
 -rwxr-xr-x   1 root  wheel    31280 Jan 23 07:59 wait4path
 -rwxr-xr-x   1 root  wheel   633328 Jan 23 07:59 zsh
+      May 2020        
+Su Mo Tu We Th Fr Sa  
+               _ _1  2  
+ 3  4  5  6  7  8  9  
+10 11 12 13 14 15 16  
+17 18 19 20 21 22 23  
+24 25 26 27 28 29 30  
+31                    
+jianingtang console  May  1 15:16 
+jianingtang ttys001  May  1 21:50 

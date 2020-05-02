@@ -1,4 +1,4 @@
-cat run-tests.csh  ;;; pwd ;;; who;;;
+    cat run-tests.csh  	; pwd	;	who
 #! /bin/csh -f
 
 set resultDir = ./results
