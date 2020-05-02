@@ -23,6 +23,16 @@ int execSingleCmd(char* userInput, bool fromParallel){
 
   char redInput[64];
   strcpy(redInput, userInput);
+  
+  if(strchr(userInput, '>') != NULL){
+      redirect = true;
+      saved_stdout = dup(1);
+      userInput = strtok(userInput, ">");
+      char* output_file = strtok(NULL, " ");
+      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
+      if (fd < 0) return 1;
+      dup2(fd, STDOUT_FILENO);
+    }
 
     // copy user input for echo parsing
     char copyInput[64];
@@ -48,15 +58,6 @@ int execSingleCmd(char* userInput, bool fromParallel){
       // parsed[i] = strtok(parsed[i], "\t");
     }
 
-    if(parsed[1]!= NULL && parsed[1][0] != '\'' && parsed[1][0] !='\"' && strchr(userInput, '>') != NULL){
-      redirect = true;
-      saved_stdout = dup(1);
-      userInput = strtok(redInput, ">");
-      char* output_file = strtok(NULL, " ");
-      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
-      if (fd < 0) return 1;
-      dup2(fd, STDOUT_FILENO);
-    }
     //Regarding parallel mode: all built-in commands should return 
     //an error message in parallel mode.
     if(fromParallel && (strcmp(parsed[0],"bye") == 0 || 
