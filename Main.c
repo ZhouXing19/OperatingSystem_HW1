@@ -32,7 +32,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
       int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
       if (fd < 0) return 1;
       dup2(fd, STDOUT_FILENO);
-    }
+  }
 
     // copy user input for echo parsing
     char copyInput[64];
@@ -139,7 +139,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
       else{
         char *str = strcat(parsed[1], "\n");
         write(STDOUT_FILENO, str, strlen(str));
-        //printf("%s\n", parsed[1]);
+        //("%s\n", parsed[1]);
       }
     }
 
@@ -255,15 +255,20 @@ int execPipeCmd(char* userInput, bool fromParallel){
 }
 
 int parseSingleCommand(char* userInput, bool fromParallel){
-  if(strchr(userInput, '>') != NULL && strchr(userInput, '|') != NULL){
-    printError();
-    return 1;
+  int pipe = -1;
+  int redirect = -1;
+  for(int i=0; i<strlen(userInput); i++){
+    if(userInput[i] == '|') pipe = i;
+    if(userInput[i] == '>') redirect = i;
   }
-  else if(strchr(userInput, '|') != NULL){
-    execPipeCmd(userInput, fromParallel);
-  }
-  else{
+  if(pipe == -1){
     execSingleCmd(userInput, fromParallel);
+  } 
+  else if(redirect == -1 || redirect > pipe){
+    execPipeCmd(userInput, fromParallel);
+  } 
+  else{
+    printError();// error: '>' before last '|'
   }
   return 0;
 }
