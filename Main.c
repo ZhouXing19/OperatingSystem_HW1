@@ -27,14 +27,22 @@ int execSingleCmd(char* userInput, bool fromParallel){
     char* output_file = strtok(NULL, " ");
     int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC); 
     if (fd < 0) return 1;
-    dup2(fd, STDOUT_FILENO);
+    // dup2(fd, STDOUT_FILENO);
   }
 
     // copy user input for echo parsing
     char copyInput[64];
-    strcpy (copyInput, userInput);
-    int dquote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
-    int squote = (userInput[strlen(userInput)-1] == '\'')? 1: 0;
+    int dquote = 0;
+    int squote = 0;
+    strcpy(copyInput, userInput);
+    for(int t=0; t<64; t++){
+      if (copyInput[t] == '\"'){
+        dquote++;
+      }
+      else if(copyInput[t] == '\''){
+        squote++;
+      }
+    }
 
     // general parsing
     char* parsed[20];
@@ -80,47 +88,41 @@ int execSingleCmd(char* userInput, bool fromParallel){
       // case 1: no args
       if(parsed[1] == NULL){
         write(STDOUT_FILENO, "\n", 1);
-        //printf("\n");
       } 
       // case 2: arg starts with '\' 
       else if(strchr(parsed[1], '\\') != NULL){
         printError();
+        if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
         return 1;
       }
       // case 3: arg starts with " 
       else if(parsed[1][0] == '\"'){
+        if(dquote == 1){
+          printError();
+          if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
+          return 1;
+        }
         char* cmd = strtok(copyInput, "\"");
         char* str = strtok(NULL, "\""); 
-        char* rest = strtok(NULL, "\"");
-        if(rest != NULL || dquote == 1){
-          if(str == NULL) write(STDOUT_FILENO, "\n", 1);
-          else{
-            str = strcat(str, "\n");
-            write(STDOUT_FILENO, str, strlen(str));
-          }
-        }
+        if(str == NULL) write(STDOUT_FILENO, "\n", 1);
         else{
-          // without trailing "
-          printError();
-          return 1;
+          str = strcat(str, "\n");
+          write(STDOUT_FILENO, str, strlen(str));
         }
       }
       // case 4: arg starts with '
       else if(parsed[1][0] == '\''){
+        if(squote == 1){
+          printError();
+          if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
+          return 1;
+        }
         char* cmd = strtok(copyInput, "\'");
         char* str = strtok(NULL, "\'"); 
-        char* rest = strtok(NULL, "\'");
-        if(rest != NULL || squote == 1){
-          if(str == NULL) write(STDOUT_FILENO, "\n", 1);
-          else{
-            str = strcat(str, "\n");
-            write(STDOUT_FILENO, str, strlen(str));
-          }
-        }
+        if(str == NULL) write(STDOUT_FILENO, "\n", 1);
         else{
-          // without trailing "
-          printError();
-          return 1;
+          str = strcat(str, "\n");
+          write(STDOUT_FILENO, str, strlen(str));
         }
       }
       // case 5: normal case: echo arg
@@ -158,9 +160,8 @@ int execSingleCmd(char* userInput, bool fromParallel){
         }
       }
     }
-    if(redirect){
-      dup2(saved_stdout, 1); //防止redirect之后print到文件中
-    }
+    if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
+
   return 0;
 }
 
