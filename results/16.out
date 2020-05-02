@@ -1,3 +1,4 @@
+cat run-tests.csh  ;;; pwd ;;; who;;;
 #! /bin/csh -f
 
 set resultDir = ./results
@@ -30,9 +31,6 @@ foreach test ($list)
     # this is how you run the particular test
     (${scriptDir}/test${test}.csh > ${tmpFile}.out) >& ${tmpFile}.err
     set testStatus = $status
-
-	cat ${tmpFile}.out > runoutpur.txt
-	cat ${tmpFile}.err > runerr.txt
 
     # check for differences in output
     diff ${tmpFile}.out ${resultDir}/${test}.out >& ${tmpFile}.out.diff
@@ -117,3 +115,6 @@ if ($#argv != 1) then
     @ grade = $PASS * 1
     echo "Total: $grade / 20"
 endif
+/Users/jianingtang/Desktop/OSPorject1/OperatingSystem_HW1
+jianingtang console  May  1 15:16 
+jianingtang ttys001  May  1 21:50 

@@ -1,0 +1,1 @@
+./pr 2 results/fout & ./pr 1 results/fout & ./pr 0 results/fout
