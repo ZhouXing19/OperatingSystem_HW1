@@ -426,7 +426,6 @@ int main(int argc, char** argv){
         continue;
       }
       else{
-        printf("chao guole \n");
         checkMixingCommand(token);
       }
     }

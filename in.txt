@@ -1,1 +1,1 @@
-ls -la /bin > results/fout
+pwd; ls -la /bin | grep 'ch' > results/fout
