@@ -281,8 +281,10 @@ int parseSequentialCommand(char* userInput){
       parsed[++i] = strtok(NULL, " ");
     }
     if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
+      printf("here4\n");
       userInput = "bye"; // in seq or par -> terminate parent process
       exit(0); // exit successfully
+      printf("here5\n");
     }
     // printf("back token is %s\n", token);
     // token = strtok(NULL, ";");
@@ -341,15 +343,17 @@ int parseParallelCommand(char* userInput){
 // STEP 1 **********************************************************************
 int getUserInput(char* userInput){
   char buf[MAX_INPUT_LEN]; 
-  if(fgets(buf, MAX_INPUT_LEN, stdin)){
+  fgets(buf, MAX_INPUT_LEN, stdin);
+  if(sizeof(buf) == 0){
     return 0;
   }
   char *token = strtok(buf, "\n");
-  if (strlen(token) == MAX_INPUT_LEN) {
+  if (sizeof(token) == MAX_INPUT_LEN) {
     printError();
     return 1;
   }
   strcpy(userInput, buf);
+
   return 0;
 }
 
@@ -358,7 +362,6 @@ int checkMixingCommand(char* userInput){
     const char semi = ';';
     char *findAnd = strchr(userInput, and);
     char *findSemi = strchr(userInput, semi);
-
     if(findAnd == NULL && findSemi == NULL){
       parseSingleCommand(userInput, false);
     } 
