@@ -151,7 +151,6 @@ int execSingleCmd(char* userInput, bool fromParallel){
 	    getcwd(cwd, sizeof(cwd)); 
       char *str = strcat(cwd, "\n");
       write(STDOUT_FILENO, str, strlen(str));
-	    //printf("%s\n", cwd);
     }
 
     // system function:
@@ -159,6 +158,17 @@ int execSingleCmd(char* userInput, bool fromParallel){
       int status;
       pid_t pid = fork();
       if(pid==0){
+          if(strcmp(parsed[0], "grep") == 0 && parsed[1] != NULL){
+            char* copy1 = parsed[1];
+            if(copy1[0] == '\''){
+              char* fst = strtok(copy1, "\'");
+              parsed[1] = fst;
+            }
+            else if(copy1[0] == '\"'){
+              char* fst = strtok(copy1, "\"");
+              parsed[1] = fst;
+            }
+          }
           execvp(parsed[0], parsed);
       }
       else{
@@ -289,11 +299,9 @@ int parseSequentialCommand(char* userInput){
       parsed[++i] = strtok(NULL, " ");
     }
     if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
-      userInput = "bye"; // in seq or par -> terminate parent process
+      userInput = "bye"; 
       exit(0); // exit successfully
     }
-    // printf("back token is %s\n", token);
-    // token = strtok(NULL, ";");
     token = tokens[++k];
   }
   return 0;
@@ -326,22 +334,6 @@ int parseParallelCommand(char* userInput){
   while (wait(NULL) != -1){
     pid_t cpid = waitpid(pid, &status, 0);
   }
-
-  // for(int t=0; t<20; t++){
-  //   token = tokens[t];
-  //   if(token == NULL) break;
-  //   char* parsed[20];
-  //   int i=0;
-  //   parsed[i] = strtok(token, " ");
-  //   while(parsed[i] != NULL){
-  //     parsed[++i] = strtok(NULL, " ");
-  //   }
-  //   if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
-  //     userInput = "bye"; // in seq or par -> terminate parent process
-  //     exit(0); // exit successfully
-  //   }
-  // }
-
   return 0;
 }
 
@@ -392,7 +384,6 @@ int main(int argc, char** argv){
   FILE *file;
   char buffer[MAX_INPUT_LEN];
 
-  // printf("argc is %d\n", argc);
   // interactive mode
   if(argc == 1){
     while(strcmp(userInput,"bye") != 0){
