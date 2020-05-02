@@ -71,7 +71,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
     else if(strcmp(parsed[0],"cd")==0){
       if (strcmp(parsed[0], "") != 0 && parsed[2]!= NULL) {
         printError(); 
-        return 0;
+        return 1;
       } 
       int res = parsed[1] == NULL? chdir(getenv("HOME")): chdir(parsed[1]);
     }
@@ -85,6 +85,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
       // case 2: arg starts with '\' 
       else if(strchr(parsed[1], '\\') != NULL){
         printError();
+        return 1;
       }
       // case 3: arg starts with " 
       else if(parsed[1][0] == '\"'){
@@ -101,6 +102,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
         else{
           // without trailing "
           printError();
+          return 1;
         }
       }
       // case 4: arg starts with '
@@ -118,6 +120,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
         else{
           // without trailing "
           printError();
+          return 1;
         }
       }
       // case 5: normal case: echo arg
@@ -129,7 +132,10 @@ int execSingleCmd(char* userInput, bool fromParallel){
     }
 
     else if(strcmp(parsed[0],"pwd")==0){
-      if(parsed[1] != NULL) printError(); // extra arg error
+      if(parsed[1] != NULL) {
+        printError(); // extra arg error
+        return 1;
+      }
       char cwd[1024]; 
 	    getcwd(cwd, sizeof(cwd)); 
       char *str = strcat(cwd, "\n");
@@ -336,7 +342,10 @@ int getUserInput(char* userInput){
   char buf[MAX_INPUT_LEN]; 
   fgets(buf, MAX_INPUT_LEN, stdin);
   char *token = strtok(buf, "\n");
-  if (strlen(token) == MAX_INPUT_LEN) printError();
+  if (strlen(token) == MAX_INPUT_LEN) {
+    printError();
+    return 1;
+  }
   strcpy(userInput, buf);
   return 0;
 }
@@ -359,6 +368,7 @@ int checkMixingCommand(char* userInput){
     }
     else{
       printError();
+      return 1;
     }
 
   return 0;
@@ -368,9 +378,10 @@ int main(int argc, char** argv){
   char userInput[MAX_INPUT_LEN];
   int commandType;
 
-  FILE *file = NULL;
+  FILE *file;
   char buffer[MAX_INPUT_LEN];
 
+  // printf("argc is %d\n", argc);
   // interactive mode
   if(argc == 1){
     while(strcmp(userInput,"bye") != 0){
@@ -383,23 +394,28 @@ int main(int argc, char** argv){
   // batch mode
   else if(argc == 2){
     char *bFile= strdup(argv[1]);
-    if((file = fopen(bFile, "r")) == NULL){
+    file = fopen(bFile, "r");
+    if(file == NULL){
       printError();
-      return 0;
+      return 1;
     }
 
-    while(fgets(buffer, MAX_INPUT_LEN, file)){
-      char *token = strtok(buffer, "\n");
-      if (strlen(token) == MAX_INPUT_LEN){
+    char* token;
+    while(fgets(buffer, MAX_INPUT_LEN, file) != NULL && strcmp(token,"bye") != 0){
+      token = strtok(userInput, "\n");
+      if (strlen(userInput) == MAX_INPUT_LEN){
         printError();
+        //TODO: ========= return 1;
         continue;
       } 
       checkMixingCommand(token);
     }
+    fclose(file);
   }
   // extra input file
   else {
     printError();
+    return 1;
   }
   return 0;
 }
