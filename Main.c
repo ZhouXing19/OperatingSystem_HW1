@@ -17,7 +17,7 @@ void printError(){
   write(STDERR_FILENO, error_message, strlen(error_message));
 }
 
-int execSingleCmd(char* userInput){
+int execSingleCmd(char* userInput, bool fromParallel){
   bool redirect;
   int saved_stdout;
   if(strchr(userInput, '>') != NULL){
@@ -33,7 +33,8 @@ int execSingleCmd(char* userInput){
     // copy user input for echo parsing
     char copyInput[64];
     strcpy (copyInput, userInput);
-    int quote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
+    int dquote = (userInput[strlen(userInput)-1] == '\"')? 1: 0;
+    int squote = (userInput[strlen(userInput)-1] == '\'')? 1: 0;
 
     // general parsing
     char* parsed[20];
@@ -43,6 +44,17 @@ int execSingleCmd(char* userInput){
       parsed[++i] = strtok(NULL, " ");
     }
 
+    //Regarding parallel mode: all built-in commands should return 
+    //an error message in parallel mode.
+    if(fromParallel && (strcmp(parsed[0],"bye") == 0 || 
+    strcmp(parsed[0],"cd") == 0 || strcmp(parsed[0],"echo") == 0
+    || strcmp(parsed[0],"pwd") == 0)){
+      if(redirect){
+      dup2(saved_stdout, 1); //防止redirect之后print到文件中
+      }
+      printError();
+      return 1;
+    }
     
     if(strcmp(parsed[0],"bye") == 0){
       if(parsed[1]==NULL){
@@ -71,15 +83,15 @@ int execSingleCmd(char* userInput){
         //printf("\n");
       } 
       // case 2: arg starts with '\' 
-      else if(parsed[1][0] == '\\'){
+      else if(strchr(parsed[1], '\\') != NULL){
         printError();
       }
       // case 3: arg starts with " 
-      else if(parsed[1][0] == '"'){
+      else if(parsed[1][0] == '\"'){
         char* cmd = strtok(copyInput, "\"");
         char* str = strtok(NULL, "\""); 
         char* rest = strtok(NULL, "\"");
-        if(rest != NULL || quote == 1){
+        if(rest != NULL || dquote == 1){
           if(str == NULL) write(STDOUT_FILENO, "\n", 1);
           else{
             str = strcat(str, "\n");
@@ -91,7 +103,24 @@ int execSingleCmd(char* userInput){
           printError();
         }
       }
-      // case 4: normal case: echo arg
+      // case 4: arg starts with '
+      else if(parsed[1][0] == '\''){
+        char* cmd = strtok(copyInput, "\'");
+        char* str = strtok(NULL, "\'"); 
+        char* rest = strtok(NULL, "\'");
+        if(rest != NULL || squote == 1){
+          if(str == NULL) write(STDOUT_FILENO, "\n", 1);
+          else{
+            str = strcat(str, "\n");
+            write(STDOUT_FILENO, str, strlen(str));
+          }
+        }
+        else{
+          // without trailing "
+          printError();
+        }
+      }
+      // case 5: normal case: echo arg
       else{
         char *str = strcat(parsed[1], "\n");
         write(STDOUT_FILENO, str, strlen(str));
@@ -130,7 +159,7 @@ int execSingleCmd(char* userInput){
 }
 
 // STEP 3 **********************************************************************
-int pipefork(char* userInput, bool inPipe, bool first, bool last, int input){
+int pipefork(char* userInput, bool inPipe, bool first, bool last, int input, bool fromParallel){
   int p[2];
   int status;
   if (inPipe) pipe(p);
@@ -147,7 +176,7 @@ int pipefork(char* userInput, bool inPipe, bool first, bool last, int input){
       dup2(p[1], STDOUT_FILENO);
       dup2(input, STDIN_FILENO);
     }
-    execSingleCmd(userInput);
+    execSingleCmd(userInput, fromParallel);
     exit(0);
   }
   else{
@@ -163,7 +192,7 @@ int pipefork(char* userInput, bool inPipe, bool first, bool last, int input){
   return 0;
 }
 
-int execPipeCmd(char* userInput){
+int execPipeCmd(char* userInput, bool fromParallel){
   int saved_stdin = dup(0);
   int saved_stdout = dup(1);
   int input = 0;
@@ -178,13 +207,13 @@ int execPipeCmd(char* userInput){
 
   for(int i=0; i<n; i++){
     if(i == 0){
-      input = pipefork(parsed[i], true, true, false, input);
+      input = pipefork(parsed[i], true, true, false, input, fromParallel);
     }
     else if(i == n-1){
-      input = pipefork(parsed[i], true, false, true, input);
+      input = pipefork(parsed[i], true, false, true, input, fromParallel);
     }
     else{
-      input = pipefork(parsed[i], true, false, false, input);
+      input = pipefork(parsed[i], true, false, false, input, fromParallel);
     }
   }
 
@@ -199,21 +228,16 @@ int execPipeCmd(char* userInput){
   return 0;
 }
 
-int parseSingleCommand(char* userInput){
-  int pipe = -1;
-  int redirect = -1;
-  for(int i=0; i<strlen(userInput); i++){
-    if(userInput[i] == '|') pipe = i;
-    if(userInput[i] == '>') redirect = i;
+int parseSingleCommand(char* userInput, bool fromParallel){
+  if(strchr(userInput, '>') != NULL && strchr(userInput, '|') != NULL){
+    printError();
+    return 1;
   }
-  if(pipe == -1){
-    execSingleCmd(userInput);
-  } 
-  else if(redirect == -1 || redirect > pipe){
-    execPipeCmd(userInput);
-  } 
+  else if(strchr(userInput, '|') != NULL){
+    execPipeCmd(userInput, fromParallel);
+  }
   else{
-    printError(); // error: '>' before last '|'
+    execSingleCmd(userInput, fromParallel);
   }
   return 0;
 }
@@ -236,7 +260,7 @@ int parseSequentialCommand(char* userInput){
     if(pid < 0) return 1;
     
     else if(pid == 0){ // child process
-      parseSingleCommand(token);
+      parseSingleCommand(token, false);
       exit(0);
     }
     else{ // parent process
@@ -278,7 +302,7 @@ int parseParallelCommand(char* userInput){
     pid = fork();
     if(pid < 0) return 1;
     if( pid == 0){
-      parseSingleCommand(token);
+      parseSingleCommand(token, true);
       exit(0);
     }
     token = tokens[++k];
@@ -288,20 +312,20 @@ int parseParallelCommand(char* userInput){
     pid_t cpid = waitpid(pid, &status, 0);
   }
 
-  for(int t=0; t<20; t++){
-    token = tokens[t];
-    if(token == NULL) break;
-    char* parsed[20];
-    int i=0;
-    parsed[i] = strtok(token, " ");
-    while(parsed[i] != NULL){
-      parsed[++i] = strtok(NULL, " ");
-    }
-    if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
-      userInput = "bye"; // in seq or par -> terminate parent process
-      exit(0); // exit successfully
-    }
-  }
+  // for(int t=0; t<20; t++){
+  //   token = tokens[t];
+  //   if(token == NULL) break;
+  //   char* parsed[20];
+  //   int i=0;
+  //   parsed[i] = strtok(token, " ");
+  //   while(parsed[i] != NULL){
+  //     parsed[++i] = strtok(NULL, " ");
+  //   }
+  //   if(strcmp(parsed[0],"bye") == 0 && parsed[1]==NULL){
+  //     userInput = "bye"; // in seq or par -> terminate parent process
+  //     exit(0); // exit successfully
+  //   }
+  // }
 
   return 0;
 }
@@ -325,8 +349,7 @@ int checkMixingCommand(char* userInput){
     char *findSemi = strchr(userInput, semi);
 
     if(findAnd == NULL && findSemi == NULL){
-      
-      parseSingleCommand(userInput);
+      parseSingleCommand(userInput, false);
     } 
     else if(findAnd == NULL && findSemi != NULL){
       parseSequentialCommand(userInput);

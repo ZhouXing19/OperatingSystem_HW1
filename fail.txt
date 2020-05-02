@@ -1,6 +1,0 @@
-1. overwrite
-
-
-2. echo a; echo b; bye
-a
-b
