@@ -53,13 +53,22 @@ int execSingleCmd(char* userInput, bool fromParallel){
     int i=0;
     parsed[i] = strtok(userInput, " ");
     while(parsed[i] != NULL){
-      if(strchr(parsed[i], '\t') != NULL){
-      char * copy1 = parsed[0];
-      char* fst = strtok(copy1, "\t");
-      char* snd = strtok(NULL, "\t");
-      parsed[i] = (fst == NULL)? snd : fst;
-    }
       parsed[++i] = strtok(NULL, " ");
+      printf("i id %d, cmd is %s----\n", i, parsed[i-1]);
+    }
+    if(strcmp(parsed[i-1], " ") == 0 || strcmp(parsed[i-1], "\t")== 0){
+      parsed[i-1] = NULL;
+    }
+
+    int k = 0;
+    for(k = 0; k< i; k++){
+      if(parsed[k] == NULL) continue;
+      if(strchr(parsed[k], '\t') != NULL){
+        char * copy1 = parsed[0];
+        char* fst = strtok(copy1, "\t");
+        char* snd = strtok(NULL, "\t");
+        parsed[k] = (fst == NULL)? snd : fst;
+      }
     }
 
     //Regarding parallel mode: all built-in commands should return 
