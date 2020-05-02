@@ -405,19 +405,23 @@ int main(int argc, char** argv){
       return 1;
     }
 
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
     char* token = "";
-    while(fgets(buffer, MAX_INPUT_LEN, file) != NULL && strcmp(token,"bye") != 0){
-      write(STDOUT_FILENO, buffer, strlen(buffer));
-      token = strtok(buffer, "\n");
+    while((read = getline(&line, &len, file) != -1) && strcmp(token,"bye") != 0){
+      write(STDOUT_FILENO, line, strlen(line));
+      token = strtok(line, "\n");
       if(token == NULL){
         return 0;
       }
-      if (strlen(token) == MAX_INPUT_LEN){
-        printError();
-        return 1;
-        continue;
-      } 
-      checkMixingCommand(token);
+      if (strlen(token) >= MAX_INPUT_LEN){
+        // printError();
+        // return 1;
+      }
+      else{
+        checkMixingCommand(token);
+      }
     }
     fclose(file);
   }
