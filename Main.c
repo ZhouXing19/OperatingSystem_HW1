@@ -77,7 +77,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
 
   
     else if(strcmp(parsed[0],"cd")==0){
-      if (strcmp(parsed[0], "") != 0 && parsed[2]!= NULL) {
+      if (strcmp(parsed[0], "") == 0 && parsed[2]!= NULL) {
         if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
         printError(); 
         return 1;
