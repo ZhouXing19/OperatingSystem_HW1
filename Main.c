@@ -407,11 +407,11 @@ int main(int argc, char** argv){
 
     char* token = "";
     while(fgets(buffer, MAX_INPUT_LEN, file) != NULL && strcmp(token,"bye") != 0){
+      write(STDOUT_FILENO, buffer, strlen(buffer));
       token = strtok(buffer, "\n");
       if(token == NULL){
-        write(STDOUT_FILENO, "\n", 1);
         return 0;
-      } 
+      }
       if (strlen(token) == MAX_INPUT_LEN){
         printError();
         return 1;
