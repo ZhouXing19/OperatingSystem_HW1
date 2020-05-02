@@ -78,6 +78,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
   
     else if(strcmp(parsed[0],"cd")==0){
       if (strcmp(parsed[0], "") != 0 && parsed[2]!= NULL) {
+        if(redirect) dup2(saved_stdout, 1); //防止redirect之后print到文件中
         printError(); 
         return 1;
       } 
@@ -147,7 +148,6 @@ int execSingleCmd(char* userInput, bool fromParallel){
 
     // system function:
     else{
-
       int status;
       pid_t pid = fork();
       if(pid==0){
@@ -341,7 +341,9 @@ int parseParallelCommand(char* userInput){
 // STEP 1 **********************************************************************
 int getUserInput(char* userInput){
   char buf[MAX_INPUT_LEN]; 
-  fgets(buf, MAX_INPUT_LEN, stdin);
+  if(fgets(buf, MAX_INPUT_LEN, stdin)){
+    return 0;
+  }
   char *token = strtok(buf, "\n");
   if (strlen(token) == MAX_INPUT_LEN) {
     printError();
@@ -352,7 +354,6 @@ int getUserInput(char* userInput){
 }
 
 int checkMixingCommand(char* userInput){
-
     const char and = '&';
     const char semi = ';';
     char *findAnd = strchr(userInput, and);
@@ -406,7 +407,7 @@ int main(int argc, char** argv){
       token = strtok(userInput, "\n");
       if (strlen(userInput) == MAX_INPUT_LEN){
         printError();
-        //TODO: ========= return 1;
+        return 1;
         continue;
       } 
       checkMixingCommand(token);
