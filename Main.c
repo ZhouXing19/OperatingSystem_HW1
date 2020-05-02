@@ -29,7 +29,7 @@ int execSingleCmd(char* userInput, bool fromParallel){
       saved_stdout = dup(1);
       userInput = strtok(userInput, ">");
       char* output_file = strtok(NULL, " ");
-      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC | S_IRUSR | S_IWUSR |S_IXUSR); 
+      int fd = open(output_file, O_RDWR | O_CREAT | O_TRUNC | S_IRWXU); 
       if (fd < 0) return 1;
       dup2(fd, STDOUT_FILENO);
   }

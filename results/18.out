@@ -1,2 +1,0 @@
-pwd; ls -la /bin | grep 'ch' > results/fout
-/Users/jianingtang/Desktop/OSPorject1/OperatingSystem_HW1
