@@ -420,6 +420,7 @@ int main(int argc, char** argv){
       }
       if (strlen(token) >= MAX_INPUT_LEN){
         // return 1;
+        printError();
         continue;
       }
       else{
